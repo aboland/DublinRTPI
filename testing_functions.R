@@ -13,11 +13,6 @@ library(jsonlite)
 library(tidyverse)
 
 
-my_stop <- jsonlite::fromJSON("https://data.smartdublin.ie/cgi-bin/rtpi/realtimebusinformation?stopid=334&format=json")
-short_my_stop <- my_stop$results %>% select(duetime, departureduetime, destination, route, monitored, sourcetimestamp)
-short_my_stop %>% filter(route == 140)
-
-
 db_get_stop_route_info <- function(stop_number, selected_route = NULL){
   
   if(!is.null(selected_route)){
@@ -27,17 +22,51 @@ db_get_stop_route_info <- function(stop_number, selected_route = NULL){
   }
   
   if(all_info$errorcode == 0){
-    tidy_info <- all_info$results %>% select(duetime, departureduetime, destination, route, monitored, sourcetimestamp)
+    tidy_info <- all_info$results %>% select(arrivaldatetime, duetime, departureduetime, destination, route, monitored, sourcetimestamp, monitored)
   }else{
     tidy_info <- all_info$errormessage
   }
   return(tidy_info)
 }
 
-get_stop_info(334, 140)
+db_get_stop_route_info(334, 140)
 
 
-get_stop_info(896)
+db_get_stop_route_info(896)
+
+
+db_get_multi_stop_info <- function(stop_numbers){
+  
+  stop_numbers = as.numeric(stop_numbers)
+  if(sum(is.na(stop_numbers))>0)
+    stop("Non numeric stop number!")
+  
+  stop_info <- list()
+  combined_info <- NULL
+  
+  for(i in 1:length(stop_numbers)){
+    temp_info <- jsonlite::fromJSON(paste0("https://data.smartdublin.ie/cgi-bin/rtpi/realtimebusinformation?stopid=", stop_numbers[i],"&format=json"))
+    
+    if(temp_info$errorcode == 0){
+      temp_info <- temp_info$results %>% 
+        select(arrivaldatetime, duetime, departureduetime, destination, route, monitored, sourcetimestamp, monitored) %>%
+        mutate(datatime = Sys.time(), stopnumber = stop_numbers[i])
+      stop_info[[i]] <- temp_info
+      combined_info <- bind_rows(combined_info, temp_info)
+    }else{
+      stop_info[[i]] <- temp_info$errormessage
+    }
+    
+  }
+  names(stop_info) <- paste0("number", stop_numbers)
+  combined_info <- combined_info %>% arrange(arrivaldatetime)
+  return(list(results = combined_info, stop = stop_info))
+}
+
+
+db_get_multi_stop_info(c(334, 335, 336))
+
+
 
 
 
