@@ -25,60 +25,7 @@ available_bus_stops <- data_frame(longname = c("D'Olier St. - Outside Office (7b
                                              336,
                                              4495))
 
-
-# Function to access Dublin Bus RTPI API
-db_get_multi_stop_info <- function(stop_numbers){
-  
-  # Check that the input stop numbers are numeric
-  stop_numbers = as.numeric(stop_numbers)
-  if(sum(is.na(stop_numbers))>0)
-    stop("Non numeric stop number!")
-  
-  stop_info <- list()
-  combined_info <- NULL
-  
-  # Progress function will only work in Shiny
-  withProgress(message = 'Updating data', value = 0.1, {
-    # Loop over all bus stops
-    for(i in 1:length(stop_numbers)){
-      # Update progress bar message
-      incProgress(0, detail = paste0("Getting stop ", stop_numbers[i], " info"))
-      
-      # Call API
-      temp_info <- jsonlite::fromJSON(paste0("https://data.smartdublin.ie/cgi-bin/rtpi/realtimebusinformation?stopid=", stop_numbers[i],"&format=json"))
-      
-      if(temp_info$errorcode == 0){
-        # If no error then tidy up data
-        temp_info <- temp_info$results %>% 
-          select(arrivaldatetime, duetime, departureduetime, destination, route, monitored, sourcetimestamp, monitored) %>%
-          mutate(datatime = Sys.time(), stopnumber = stop_numbers[i])
-        stop_info[[i]] <- temp_info
-        combined_info <- bind_rows(combined_info, temp_info)
-      }else{
-        # If error return the error message
-        stop_info[[i]] <- temp_info$errormessage
-      }
-      # increase progress bar indicator
-      incProgress(1/length(stop_numbers))
-    }
-  })
-  names(stop_info) <- paste0("number", stop_numbers)
-  combined_info <- combined_info %>% arrange(arrivaldatetime)
-  return(list(results = combined_info, stop = stop_info))
-}
-
-
-
-
-dart_stop_info <- function(station_name){
-  api_data <- xmlParse(paste0("http://api.irishrail.ie/realtime/realtime.asmx/getStationDataByCodeXML?StationCode=", station_name))
-  stop_info <- xmlToDataFrame(api_data)
-  
-  stop_info <- stop_info %>% select(Destination, Status, Lastlocation, Duein, Exparrival, Expdepart, Direction, Traintype)
-  return(stop_info)
-}
-
-
+source("helpers.R")
 
 
 # Define UI for application that draws a histogram
@@ -209,7 +156,7 @@ server <- function(input, output, session) {
     
     
     bus_info <- tryCatch({
-      api_info <- db_get_multi_stop_info(isolate(input$db_selected_stops))$results
+      api_info <- db_scrape_multi_stop_info(isolate(input$db_selected_stops))$results
       list(results = api_info, error = FALSE)
     }, error = function(e){return(list(results = "Could not retrieve results", error= TRUE))}
     )
@@ -219,12 +166,10 @@ server <- function(input, output, session) {
     if(bus_info$error == FALSE){
       bus_info_tidy <- bus_info$results %>%
         mutate(
-          # lastbuscontact = difftime(lubridate::now(),  lubridate::dmy_hms(sourcetimestamp), units="mins") %>% round(), 
-          # datatime = difftime(lubridate::now(),  lubridate::ymd_hms(datatime), units="mins") %>% round(),
-          lastbuscontact = as.POSIXct(sourcetimestamp, format="%d/%m/%Y %H:%M:%S") %>% format("%H:%M"),
+          # lastbuscontact = as.POSIXct(sourcetimestamp, format="%d/%m/%Y %H:%M:%S") %>% format("%H:%M"),
           datatime = as.POSIXct(datatime, format="%Y/%m/%d %H:%M:%S") %>% format("%H:%M"),
           route = as.factor(route)) %>% 
-        select(Route = route, Destination = destination, EstimatedArrival = duetime, LastBusContact = lastbuscontact)  # , ArrivalLastUpdate = datatime
+        select(Route = route, Destination = destination, EstimatedArrival = duetime)  # , ArrivalLastUpdate = datatime, LastBusContact = lastbuscontact
       
       db_last_update_time$time <<- Sys.time()
     }else{
@@ -273,7 +218,7 @@ server <- function(input, output, session) {
     
   }, options = list(dom = "ti", 
                     pageLength=100, lengthMenu=c(10, 50 ,100),
-                    columnDefs = list(list(className = 'dt-center', targets = 3)),
+                    # columnDefs = list(list(className = 'dt-center', targets = 3)),
                     initComplete = DT::JS(
                       "function(settings, json) {",
                       "$(this.api().table().header()).css({'background-color': '#000', 'color': '#fff'});",
