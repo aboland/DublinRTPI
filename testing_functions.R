@@ -6,7 +6,9 @@
 #  http://api.irishrail.ie/realtime/index.htm?realtime_irishrail
 #
 #
-
+#
+# https://data.dublinked.ie/cgi-bin/rtpi/realtimebusinformation?stopid=184
+# https://proxy.streamdata.io/https://data.dublinked.ie/cgi-bin/rtpi/realtimebusinformation?stopid=184
 
 
 library(jsonlite)
