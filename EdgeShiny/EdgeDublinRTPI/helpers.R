@@ -93,6 +93,9 @@ db_scrape_multi_stop_info <- function(stop_numbers){
       temp_info <- temp_info %>%
         mutate(duetime = difftime(arrivaldatetime, Sys.time(), units = "mins") %>% round())
       
+      if(length(which(temp_info$duetime <= 0)) > 0)
+        temp_info$duetime[which(temp_info$duetime <= 0)] <- 0
+      
       stop_info[[i]] <- temp_info
       combined_info <- bind_rows(combined_info, temp_info)
     }else{

@@ -90,7 +90,7 @@ ui <- fluidPage(
                       sidebarLayout(
                         sidebarPanel(width=3,
                                      actionButton("dart_refresh", "Refresh"),
-                                     br(),
+                                     br(),br(),
                                      selectInput("dart_selected_stops", label = "Choose Stop", 
                                                  choices = c("Tara Stret" = "tara",
                                                              "Connolly" = "cnlly"),
@@ -109,7 +109,7 @@ ui <- fluidPage(
 
 
 
-# Define server logic required to draw a histogram
+# Define server logic for app
 server <- function(input, output, session) {
   
   output$currentTime <- renderUI({
@@ -149,35 +149,38 @@ server <- function(input, output, session) {
   
   # Collect the bus times and tidy up times for the output table
   bus_times <- reactive({
-    if(input$bus_refresh>0){
+    query <- parseQueryString(session$clientData$url_search)
     
-    if(input$auto_refresh_on)
-      invalidateLater(as.numeric(input$interval) * 1000)
-    
-    
-    bus_info <- tryCatch({
-      api_info <- db_scrape_multi_stop_info(isolate(input$db_selected_stops))$results
-      list(results = api_info, error = FALSE)
-    }, error = function(e){return(list(results = "Could not retrieve results", error= TRUE))}
-    )
-    
-    # bus_info <- list(results= sample_bus_info, error= FALSE)
-    # browser()
-    if(bus_info$error == FALSE){
-      bus_info_tidy <- bus_info$results %>%
-        mutate(
-          # lastbuscontact = as.POSIXct(sourcetimestamp, format="%d/%m/%Y %H:%M:%S") %>% format("%H:%M"),
-          datatime = as.POSIXct(datatime, format="%Y/%m/%d %H:%M:%S") %>% format("%H:%M"),
-          route = as.factor(route)) %>% 
-        select(Route = route, Destination = destination, EstimatedArrival = duetime)  # , ArrivalLastUpdate = datatime, LastBusContact = lastbuscontact
+    # Only run after refresh has been clicked once or if paramters supplied
+    if(input$bus_refresh > 0 || sum(c("stops", "routes") %in% names(query))>0){  
       
-      db_last_update_time$time <<- Sys.time()
-    }else{
-      bus_info_tidy <- data_frame(error = bus_info$results)
-    }
-    
-    return(bus_info_tidy)
-    
+      if(input$auto_refresh_on)
+        invalidateLater(as.numeric(input$interval) * 1000)
+      
+      
+      bus_info <- tryCatch({
+        api_info <- db_scrape_multi_stop_info(isolate(input$db_selected_stops))$results
+        list(results = api_info, error = FALSE)
+      }, error = function(e){return(list(results = "Could not retrieve results", error= TRUE))}
+      )
+      
+      # bus_info <- list(results= sample_bus_info, error= FALSE)
+      
+      if(bus_info$error == FALSE){
+        bus_info_tidy <- bus_info$results %>%
+          mutate(
+            # lastbuscontact = as.POSIXct(sourcetimestamp, format="%d/%m/%Y %H:%M:%S") %>% format("%H:%M"),
+            datatime = as.POSIXct(datatime, format="%Y/%m/%d %H:%M:%S") %>% format("%H:%M"),
+            route = as.factor(route)) %>% 
+          select(Route = route, Destination = destination, EstimatedArrival = duetime)  # , ArrivalLastUpdate = datatime, LastBusContact = lastbuscontact
+        
+        db_last_update_time$time <<- Sys.time()
+      }else{
+        bus_info_tidy <- data_frame(error = bus_info$results)
+      }
+      
+      return(bus_info_tidy)
+      
     }
   })
   
