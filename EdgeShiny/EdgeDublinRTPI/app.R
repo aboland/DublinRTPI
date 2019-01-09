@@ -300,7 +300,7 @@ server <- function(input, output, session) {
   output$dart_currentTime <- renderUI({
     # invalidateLater causes this output to automatically
     # become invalidated every minute
-    invalidateLater(60*1000, session)
+    invalidateLater(30*1000, session)
     input$dart_refresh
     
     h2(paste0("Current Time: ", format(Sys.time(), "%H:%M")))
@@ -342,13 +342,16 @@ server <- function(input, output, session) {
     
     possible_directions <- unique(dart_times()$Direction)
     
-    query <- parseQueryString(session$clientData$url_search)
-    if("direction" %in% names(query)){
-      selected_direction <- unlist(strsplit(query$direction, ","))
+    if(is.null(input$selected_dart_direction)){
+      query <- parseQueryString(session$clientData$url_search)
+      if("direction" %in% names(query)){
+        selected_direction <- unlist(strsplit(query$direction, ","))
+      }else{
+        selected_direction <- possible_directions
+      }
     }else{
-      selected_direction <- possible_directions
+      selected_direction <- input$selected_dart_direction
     }
-    
     
     checkboxGroupInput("selected_dart_direction", "Direction",
                        choices = possible_directions,
@@ -360,11 +363,15 @@ server <- function(input, output, session) {
     
     possible_destinations <- unique(dart_times()$Destination)
     
-    query <- parseQueryString(session$clientData$url_search)
-    if("destination" %in% names(query)){
-      selected_destinations <- unlist(strsplit(query$destination, ","))
+    if(is.null(input$selected_dart_destination)){
+      query <- parseQueryString(session$clientData$url_search)
+      if("destination" %in% names(query)){
+        selected_destinations <- unlist(strsplit(query$destination, ","))
+      }else{
+        selected_destinations <- possible_destinations
+      }
     }else{
-      selected_destinations <- possible_destinations
+      selected_destinations <-input$selected_dart_destination
     }
     
     checkboxGroupInput("selected_dart_destination", "Destination",
