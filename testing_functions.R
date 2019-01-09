@@ -14,14 +14,11 @@ library(tidyverse)
 
 
 my_stop <- jsonlite::fromJSON("https://data.smartdublin.ie/cgi-bin/rtpi/realtimebusinformation?stopid=334&format=json")
-
-
 short_my_stop <- my_stop$results %>% select(duetime, departureduetime, destination, route, monitored, sourcetimestamp)
-  
 short_my_stop %>% filter(route == 140)
 
-  
-get_stop_info <- function(stop_number, selected_route = NULL){
+
+db_get_stop_route_info <- function(stop_number, selected_route = NULL){
   
   if(!is.null(selected_route)){
     all_info <- jsonlite::fromJSON(paste0("https://data.smartdublin.ie/cgi-bin/rtpi/realtimebusinformation?stopid=", stop_number,"&routeid=",selected_route,"&format=json"))
@@ -32,9 +29,15 @@ get_stop_info <- function(stop_number, selected_route = NULL){
   if(all_info$errorcode == 0){
     tidy_info <- all_info$results %>% select(duetime, departureduetime, destination, route, monitored, sourcetimestamp)
   }else{
-    tidy_info <- "No info"
+    tidy_info <- all_info$errormessage
   }
   return(tidy_info)
 }
 
 get_stop_info(334, 140)
+
+
+get_stop_info(896)
+
+
+
