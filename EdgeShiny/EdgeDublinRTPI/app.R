@@ -8,6 +8,8 @@
 #
 
 library(shiny)
+library(dplyr)
+library(XML)
 
 # Data frame used to provide possible bus stop selection
 available_bus_stops <- data_frame(longname = c("D'Olier St. - Outside Office (7b, 7d, 46a, 140, 145)", 
@@ -24,7 +26,7 @@ available_bus_stops <- data_frame(longname = c("D'Olier St. - Outside Office (7b
                                              4495))
 
 
-# Function to access RTPI API
+# Function to access Dublin Bus RTPI API
 db_get_multi_stop_info <- function(stop_numbers){
   
   # Check that the input stop numbers are numeric
@@ -68,6 +70,17 @@ db_get_multi_stop_info <- function(stop_numbers){
 
 
 
+dart_stop_info <- function(station_name){
+  api_data <- xmlParse(paste0("http://api.irishrail.ie/realtime/realtime.asmx/getStationDataByCodeXML?StationCode=", station_name))
+  stop_info <- xmlToDataFrame(api_data)
+  
+  stop_info <- stop_info %>% select(Destination, Status, Lastlocation, Duein, Exparrival, Expdepart, Direction, Traintype)
+  return(stop_info)
+}
+
+
+
+
 # Define UI for application that draws a histogram
 ui <- fluidPage(
   
@@ -79,7 +92,7 @@ ui <- fluidPage(
   navbarPage("O'Connell Bridge House - Real Time Transport Info", id="main_navbar",
              tabPanel("Buses", 
                       fluidRow(column(3,uiOutput("currentTime", container = span)), 
-                               column(3,uiOutput("last_update", container = span))
+                               column(3,uiOutput("db_last_update", container = span))
                       ),
                       sidebarLayout(
                         sidebarPanel(width=3, 
@@ -114,7 +127,8 @@ ui <- fluidPage(
                                      )
                         ),
                         mainPanel(
-                          textOutput("testText"),
+                          
+                          # textOutput("testText"),
                           DT::dataTableOutput("bus_table")
                         )
                       )
@@ -123,7 +137,26 @@ ui <- fluidPage(
                       
              ),
              tabPanel("Dart",
-                      h1("Coming soon..."))
+                      fluidRow(column(3,uiOutput("dart_currentTime", container = span)), 
+                               column(3,uiOutput("dart_last_update", container = span))
+                      ),
+                      sidebarLayout(
+                        sidebarPanel(width=3,
+                                     actionButton("dart_refresh", "Refresh"),
+                                     br(),
+                                     selectInput("dart_selected_stops", label = "Choose Stop", 
+                                                 choices = c("Tara Stret" = "tara",
+                                                             "Connolly" = "cnlly"),
+                                                 selected = "tara"),
+                                     uiOutput("dart_direction"),
+                                     uiOutput("dart_destination")
+                        ),
+                        mainPanel(
+                          DT::dataTableOutput("dart_table")
+                        )
+                      )
+                      
+             )
   )
 )
 
@@ -141,10 +174,10 @@ server <- function(input, output, session) {
     h2(paste0("Current Time: ", format(Sys.time(), "%H:%M")))
   })
   
-  last_update_time <- reactiveValues(time = NULL)  # reactive value to store last time API was successfully called
-  output$last_update <- renderUI({
-    if(!is.null(last_update_time$time)){
-      return(h2(paste0("Last Update: ",format(last_update_time$time, "%H:%M"))))
+  db_last_update_time <- reactiveValues(time = NULL)  # reactive value to store last time API was successfully called
+  output$db_last_update <- renderUI({
+    if(!is.null(db_last_update_time$time)){
+      return(h2(paste0("Last Update: ",format(db_last_update_time$time, "%H:%M"))))
     }else{
       return(h2("No Update"))
     }
@@ -169,9 +202,11 @@ server <- function(input, output, session) {
   
   # Collect the bus times and tidy up times for the output table
   bus_times <- reactive({
-    input$bus_refresh
+    if(input$bus_refresh>0){
+    
     if(input$auto_refresh_on)
       invalidateLater(as.numeric(input$interval) * 1000)
+    
     
     bus_info <- tryCatch({
       api_info <- db_get_multi_stop_info(isolate(input$db_selected_stops))$results
@@ -180,23 +215,25 @@ server <- function(input, output, session) {
     )
     
     # bus_info <- list(results= sample_bus_info, error= FALSE)
-    
+    # browser()
     if(bus_info$error == FALSE){
       bus_info_tidy <- bus_info$results %>%
         mutate(
           # lastbuscontact = difftime(lubridate::now(),  lubridate::dmy_hms(sourcetimestamp), units="mins") %>% round(), 
           # datatime = difftime(lubridate::now(),  lubridate::ymd_hms(datatime), units="mins") %>% round(),
-          lastbuscontact = lubridate::dmy_hms(sourcetimestamp) %>% format("%H:%M"),
-          datatime = lubridate::ymd_hms(datatime) %>% format("%H:%M"),
+          lastbuscontact = as.POSIXct(sourcetimestamp, format="%d/%m/%Y %H:%M:%S") %>% format("%H:%M"),
+          datatime = as.POSIXct(datatime, format="%Y/%m/%d %H:%M:%S") %>% format("%H:%M"),
           route = as.factor(route)) %>% 
         select(Route = route, Destination = destination, EstimatedArrival = duetime, LastBusContact = lastbuscontact)  # , ArrivalLastUpdate = datatime
       
-      last_update_time$time <<- Sys.time()
+      db_last_update_time$time <<- Sys.time()
     }else{
       bus_info_tidy <- data_frame(error = bus_info$results)
     }
     
     return(bus_info_tidy)
+    
+    }
   })
   
   
@@ -244,6 +281,128 @@ server <- function(input, output, session) {
                     # scrollY = "88vh", scrollX = TRUE,
                     scrollCollapse=TRUE), 
   rownames=F)
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  # --------------------------------------------------------------------------------------------
+  #
+  #      DART
+  #
+  # -------------------------------------------------------------------------------------------
+  
+  
+  output$dart_currentTime <- renderUI({
+    # invalidateLater causes this output to automatically
+    # become invalidated every minute
+    invalidateLater(60*1000, session)
+    input$dart_refresh
+    
+    h2(paste0("Current Time: ", format(Sys.time(), "%H:%M")))
+  })
+  
+  dart_last_update_time <- reactiveValues(time = NULL)  # reactive value to store last time API was successfully called
+  output$dart_last_update <- renderUI({
+    if(!is.null(dart_last_update_time$time)){
+      return(h2(paste0("Last Update: ",format(dart_last_update_time$time, "%H:%M"))))
+    }else{
+      return(h2("No Update"))
+    }
+  })
+  
+  
+  observe({
+    query <- parseQueryString(session$clientData$url_search)
+    if(sum(c("direction", "destination") %in% names(query)) > 0){
+      updateNavbarPage(session, "main_navbar", selected = "Dart")
+      # selected_direction <- unlist(strsplit(query$direction, ","))
+      # updateCheckboxGroupInput(session, "selected_dart_direction", selected = selected_direction)
+    }
+  })
+  
+  
+  dart_times <- reactive({
+    input$dart_refresh
+    invalidateLater(30*1000, session)
+    
+    temp_info <- dart_stop_info(input$dart_selected_stops)
+    
+    dart_last_update_time$time <<- Sys.time()
+    
+    return(temp_info)
+    })
+  
+  
+  output$dart_direction <- renderUI({
+    
+    possible_directions <- unique(dart_times()$Direction)
+    
+    query <- parseQueryString(session$clientData$url_search)
+    if("direction" %in% names(query)){
+      selected_direction <- unlist(strsplit(query$direction, ","))
+    }else{
+      selected_direction <- possible_directions
+    }
+    
+    
+    checkboxGroupInput("selected_dart_direction", "Direction",
+                       choices = possible_directions,
+                       selected = selected_direction,
+                       inline = T)
+  })
+  
+  output$dart_destination <- renderUI({
+    
+    possible_destinations <- unique(dart_times()$Destination)
+    
+    query <- parseQueryString(session$clientData$url_search)
+    if("destination" %in% names(query)){
+      selected_destinations <- unlist(strsplit(query$destination, ","))
+    }else{
+      selected_destinations <- possible_destinations
+    }
+    
+    checkboxGroupInput("selected_dart_destination", "Destination",
+                       choices = possible_destinations,
+                       selected = selected_destinations)
+  })
+  
+  
+  dart_table <- reactive({
+    dart_table <- dart_times()
+    
+    if(!is.null(input$selected_dart_direction))
+      dart_table <- dart_table %>% filter(Direction %in% input$selected_dart_direction)
+    
+    if(!is.null(input$selected_dart_destination))
+      dart_table <- dart_table %>% filter(Destination %in% input$selected_dart_destination)
+    
+    dart_table <- dart_table %>% select(Due = Duein, Destination, Status, LastLocation = Lastlocation, ExpectedDeparture = Expdepart, Direction, Type = Traintype)
+  })
+  
+  
+  
+  output$dart_table <- DT::renderDataTable({
+    
+    dart_table()
+    
+  }, options = list(dom = "ti", 
+                    pageLength=100,
+                    # columnDefs = list(list(className = 'dt-center', targets = 3)),
+                    initComplete = DT::JS(
+                      "function(settings, json) {",
+                      "$(this.api().table().header()).css({'background-color': '#000', 'color': '#fff'});",
+                      "}"),
+                    # scrollY = "88vh", scrollX = TRUE,
+                    scrollCollapse=TRUE), 
+  rownames=F)
+  
+  
   
 }
 

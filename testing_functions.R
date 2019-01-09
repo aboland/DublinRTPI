@@ -68,5 +68,23 @@ db_get_multi_stop_info(c(334, 335, 336))
 
 
 
+# http://api.irishrail.ie/realtime/realtime.asmx/getStationsFilterXML?StationText=ta
+# http://api.irishrail.ie/realtime/realtime.asmx/getStationDataByCodeXML?StationCode=mhide 
 
+library(XML)
+library(dplyr)
+
+sample_api_return <- xmlParse("http://api.irishrail.ie/realtime/realtime.asmx/getStationDataByCodeXML?StationCode=tara")
+sample_data <- xmlToDataFrame(sample_api_return)
+
+dart_stop_info <- function(station_name){
+  api_data <- xmlParse(paste0("http://api.irishrail.ie/realtime/realtime.asmx/getStationDataByCodeXML?StationCode=", station_name))
+  stop_info <- xmlToDataFrame(api_data)
+  
+  stop_info <- stop_info %>% select(Destination, Status, Lastlocation, Duein, Exparrival, Expdepart, Direction, Traintype)
+  return(stop_info)
+}
+
+
+dart_stop_info("tara")
 
