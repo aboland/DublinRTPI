@@ -79,7 +79,13 @@ db_scrape_multi_stop_info <- function(stop_numbers){
   stop_info <- list()
   combined_info <- NULL
   
+  # Progress function will only work in Shiny
+  withProgress(message = 'Updating data', value = 0.1, {
+    
   for(i in 1:length(stop_numbers)){
+    # Update progress bar message
+    incProgress(0, detail = paste0("Getting stop ", stop_numbers[i], " info"))
+    
     temp_info <- db_scrape_stop_route_info(stop_numbers[i])
     
     if(temp_info$errorcode == 0){
@@ -101,8 +107,11 @@ db_scrape_multi_stop_info <- function(stop_numbers){
     }else{
       stop_info[[i]] <- temp_info$errormessage
     }
-    
+    # increase progress bar indicator
+    incProgress(1/length(stop_numbers))
   }
+  })
+  
   names(stop_info) <- paste0("number", stop_numbers)
   combined_info <- combined_info %>% arrange(arrivaldatetime)
   return(list(results = combined_info, stop = stop_info))
