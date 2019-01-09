@@ -141,37 +141,47 @@ db_scrape_multi_stop_info <- function(stop_numbers){
   
   stop_info <- list()
   combined_info <- NULL
-  
-  for(i in 1:length(stop_numbers)){
-    temp_info <- db_scrape_stop_route_info(stop_numbers[i])
     
-    if(temp_info$errorcode == 0){
-      temp_info <- temp_info$results %>% 
-        select(arrivaldatetime = `Expected Time`, Destination, Route) %>%
-        mutate(datatime = Sys.time(), stopnumber = stop_numbers[i])
+    for(i in 1:length(stop_numbers)){
       
-      temp_info$arrivaldatetime[temp_info$arrivaldatetime=="Due"] <- format(Sys.time(), "%H:%M")
-      temp_info$arrivaldatetime <- as.POSIXct(temp_info$arrivaldatetime, format="%H:%M")
+      temp_info <- db_scrape_stop_route_info(stop_numbers[i])
       
-      temp_info <- temp_info %>%
-        mutate(duetime = difftime(arrivaldatetime, Sys.time(), units = "mins") %>% round())
-      
-      stop_info[[i]] <- temp_info
-      combined_info <- bind_rows(combined_info, temp_info)
-    }else{
-      stop_info[[i]] <- temp_info$errormessage
+      if(temp_info$errorcode == 0){
+        
+        temp_info <- temp_info$results %>% 
+          select(arrivaldatetime = `Expected Time`, destination = Destination, route = Route) %>%
+          mutate(datatime = Sys.time(), stopnumber = stop_numbers[i],
+                 arrivaldatetime = case_when(arrivaldatetime=="Due" ~ format(Sys.time(), "%H:%M"),
+                                             arrivaldatetime!="Due" ~ arrivaldatetime),
+                 arrivaldatetime = as.POSIXct(arrivaldatetime, format="%H:%M"),
+                 duetime = difftime(arrivaldatetime, Sys.time(), units = "mins") %>% round())
+        
+        # temp_info$arrivaldatetime[temp_info$arrivaldatetime=="Due"] <- format(Sys.time(), "%H:%M")
+        # temp_info$arrivaldatetime <- as.POSIXct(temp_info$arrivaldatetime, format="%H:%M")
+        # temp_info <- temp_info %>%
+        #   mutate(duetime = difftime(arrivaldatetime, Sys.time(), units = "mins") %>% round())
+        
+        if(length(which(temp_info$duetime <= 0)) > 0)
+          temp_info$duetime[which(temp_info$duetime <= 0)] <- 0
+        
+        stop_info[[i]] <- temp_info
+        combined_info <- bind_rows(combined_info, temp_info)
+      }else{
+        stop_info[[i]] <- temp_info$errormessage
+      }
     }
-    
-  }
+  
   names(stop_info) <- paste0("number", stop_numbers)
   combined_info <- combined_info %>% arrange(arrivaldatetime)
   return(list(results = combined_info, stop = stop_info))
 }
 
 
-db_scrape_multi_stop_info(c(334, 335, 336))
+# db_scrape_multi_stop_info(c(334, 335, 336))
 
 sample_data2 <- db_scrape_multi_stop_info(c(334, 335, 336))
+sample_data2$results
+
 
 sample_data$results$arrivaldatetime
 as.POSIXct(sample_data$results$arrivaldatetime, format="%H:%M")

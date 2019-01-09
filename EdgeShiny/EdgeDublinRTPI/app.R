@@ -198,12 +198,15 @@ server <- function(input, output, session) {
         mutate(numeric_val = gsub("[^0-9]", "", Route) %>% as.numeric()) %>% 
         arrange(numeric_val) %>% pull(Route)
       
-      
-      query <- parseQueryString(session$clientData$url_search)
-      if("routes" %in% names(query)){
-        selected_routes <- unlist(strsplit(query$routes, ","))
+      if(is.null(input$db_selected_buses)){
+        query <- parseQueryString(session$clientData$url_search)
+        if("routes" %in% names(query)){
+          selected_routes <- unlist(strsplit(query$routes, ","))
+        }else{
+          selected_routes <- bus_routes
+        }
       }else{
-        selected_routes <- bus_routes
+        selected_routes <- input$db_selected_buses
       }
       
       checkboxGroupInput("db_selected_buses", label = "Choose Routes", 

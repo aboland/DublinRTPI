@@ -117,13 +117,20 @@ db_scrape_multi_stop_info <- function(stop_numbers){
     if(temp_info$errorcode == 0){
       temp_info <- temp_info$results %>% 
         select(arrivaldatetime = `Expected Time`, destination = Destination, route = Route) %>%
-        mutate(datatime = Sys.time(), stopnumber = stop_numbers[i])
+        mutate(datatime = Sys.time(), stopnumber = stop_numbers[i],
+               arrivaldatetime = case_when(arrivaldatetime=="Due" ~ format(Sys.time(), "%H:%M"),
+                                           arrivaldatetime!="Due" ~ arrivaldatetime),
+               arrivaldatetime = as.POSIXct(arrivaldatetime, format="%H:%M"),
+               duetime = difftime(arrivaldatetime, Sys.time(), units = "mins") %>% round())
       
-      temp_info$arrivaldatetime[temp_info$arrivaldatetime=="Due"] <- format(Sys.time(), "%H:%M")
-      temp_info$arrivaldatetime <- as.POSIXct(temp_info$arrivaldatetime, format="%H:%M")
       
-      temp_info <- temp_info %>%
-        mutate(duetime = difftime(arrivaldatetime, Sys.time(), units = "mins") %>% round())
+      #   mutate(datatime = Sys.time(), stopnumber = stop_numbers[i])
+      # 
+      # temp_info$arrivaldatetime[temp_info$arrivaldatetime=="Due"] <- format(Sys.time(), "%H:%M")
+      # temp_info$arrivaldatetime <- as.POSIXct(temp_info$arrivaldatetime, format="%H:%M")
+      # 
+      # temp_info <- temp_info %>%
+      #   mutate(duetime = difftime(arrivaldatetime, Sys.time(), units = "mins") %>% round())
       
       if(length(which(temp_info$duetime <= 0)) > 0)
         temp_info$duetime[which(temp_info$duetime <= 0)] <- 0
