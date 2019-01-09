@@ -9,7 +9,9 @@
 
 library(shiny)
 library(dplyr)
+library(stringr)
 library(XML)
+library(rvest)
 
 # Data frame used to provide possible bus stop selection
 available_bus_stops <- data_frame(longname = c("D'Olier St. - Outside Office (7b, 7d, 46a, 140, 145)", 
