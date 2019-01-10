@@ -173,8 +173,8 @@ server <- function(input, output, session) {
   
   
   observeEvent(input$bus_custom_url, {
-    custom_url <- paste0("http://", session$clientData[["url_hostname"]],":", session$clientData[["url_port"]],
-                         "/?stops=",paste(input$db_selected_stops, collapse = ","), 
+    custom_url <- paste0("http://", session$clientData[["url_hostname"]],":", session$clientData[["url_port"]],session$clientData[["url_pathname"]],
+                         "?stops=",paste(input$db_selected_stops, collapse = ","), 
                          "&routes=", paste(input$db_selected_buses, collapse = ","))
     
     showModal(modalDialog(
@@ -329,7 +329,8 @@ server <- function(input, output, session) {
   observeEvent(input$dart_custom_url, {
     # custom_url <- paste0("http://127.0.0.1:4727/?station=",input$dart_selected_stop, "&direction=", paste(input$selected_dart_direction, collapse = ","))
     
-    custom_url <- paste0("http://", session$clientData[["url_hostname"]],":", session$clientData[["url_port"]],"/?station=",input$dart_selected_stop, 
+    custom_url <- paste0("http://", session$clientData[["url_hostname"]],":", session$clientData[["url_port"]],session$clientData[["url_pathname"]],
+                         "?station=",input$dart_selected_stop, 
                          "&direction=", paste(input$selected_dart_direction, collapse = ","), 
                          "&destination=", paste(input$selected_dart_destination, collapse = ","))
     
