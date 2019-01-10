@@ -27,6 +27,18 @@ available_bus_stops <- data_frame(longname = c("D'Olier St. - Outside Office (7b
                                              336,
                                              4495))
 
+
+
+# all_train_station_data <- xmlParse("http://api.irishrail.ie/realtime/realtime.asmx/getAllStationsXML")
+# all_train_station_data <- xmlToDataFrame(all_train_station_data, stringsAsFactors = F)
+# tidy_staion_data <- all_train_station_data %>% select(station = StationDesc, code = StationCode) %>% 
+#   arrange(station) %>%
+#   mutate(code = tolower(code)) %>% distinct(station, .keep_all = TRUE)
+# 
+# tidy_station_list <- as.list(tidy_staion_data$code)
+# names(tidy_station_list) <- tidy_staion_data$station
+
+
 source("helpers.R")
 
 
@@ -59,7 +71,12 @@ ui <- fluidPage(
                                                                    choiceValues = available_bus_stops$number,
                                                                    selected = c(334, 336, 4495)),
                                                 br(),
-                                                uiOutput("selected_buses_UI")
+                                                uiOutput("selected_buses_UI"),
+                                                br(),br(),
+                                                h3("Custom URL"),
+                                                p("A custom URL can be used to pre select choices when loading the app.",br(),
+                                                  "Use the button below to create a URL for the choices currently selected."),br(),
+                                                actionButton("bus_custom_url", "Create custom URL")
                                        ),
                                        tabPanel("Auto Refresh",
                                                 checkboxInput("auto_refresh_on", "On"),
@@ -93,12 +110,18 @@ ui <- fluidPage(
                         sidebarPanel(width=3,
                                      actionButton("dart_refresh", "Refresh"),
                                      br(),br(),
-                                     selectInput("dart_selected_stops", label = "Choose Stop", 
-                                                 choices = c("Tara Stret" = "tara",
-                                                             "Connolly" = "cnlly"),
+                                     selectInput("dart_selected_stop", label = "Choose Stop", 
+                                                 choices = c("Tara Street" = "tara",
+                                                             "Connolly" = "cnlly",
+                                                             "Heustion" = "hston"),
                                                  selected = "tara"),
                                      uiOutput("dart_direction"),
-                                     uiOutput("dart_destination")
+                                     uiOutput("dart_destination"),
+                                     br(),br(),
+                                     h3("Custom URL"),
+                                     p("A custom URL can be used to pre select choices when loading the app.",br(),
+                                       "Use the button below to create a URL for the choices currently selected."),br(),
+                                     actionButton("dart_custom_url", "Create custom URL")
                         ),
                         mainPanel(
                           DT::dataTableOutput("dart_table")
@@ -128,7 +151,7 @@ server <- function(input, output, session) {
     if(!is.null(db_last_update_time$time)){
       return(h2(paste0("Last Update: ",format(db_last_update_time$time, "%H:%M"))))
     }else{
-      return(h2("No Update"))
+      return(h2("No Update (click Refresh)"))
     }
   })
   
@@ -147,6 +170,21 @@ server <- function(input, output, session) {
       updateCheckboxGroupInput(session, "db_selected_buses", selected = selected_routes)
     }
   })
+  
+  
+  observeEvent(input$bus_custom_url, {
+    custom_url <- paste0("http://", session$clientData[["url_hostname"]],":", session$clientData[["url_port"]],
+                         "/?stops=",paste(input$db_selected_stops, collapse = ","), 
+                         "&routes=", paste(input$db_selected_buses, collapse = ","))
+    
+    showModal(modalDialog(
+      title = "Your custom URL",
+      a(custom_url, href = custom_url),
+      easyClose = TRUE
+    ))
+  })
+  
+  
   
   
   # Collect the bus times and tidy up times for the output table
@@ -271,11 +309,35 @@ server <- function(input, output, session) {
   
   observe({
     query <- parseQueryString(session$clientData$url_search)
-    if(sum(c("direction", "destination") %in% names(query)) > 0){
+    if(sum(c("direction", "destination", "station") %in% names(query)) > 0){
       updateNavbarPage(session, "main_navbar", selected = "Dart")
+      # browser()
+      updateSelectInput(session, "dart_selected_stop", selected = query$station)
       # selected_direction <- unlist(strsplit(query$direction, ","))
       # updateCheckboxGroupInput(session, "selected_dart_direction", selected = selected_direction)
     }
+  })
+  
+  
+  
+  # observe({
+  #   session$sendCustomMessage(type = 'testmessage',
+  #                             message = list(a = 1, b = 'text',
+  #                                            controller = input$dart_custom_url))
+  # })
+  
+  observeEvent(input$dart_custom_url, {
+    # custom_url <- paste0("http://127.0.0.1:4727/?station=",input$dart_selected_stop, "&direction=", paste(input$selected_dart_direction, collapse = ","))
+    
+    custom_url <- paste0("http://", session$clientData[["url_hostname"]],":", session$clientData[["url_port"]],"/?station=",input$dart_selected_stop, 
+                         "&direction=", paste(input$selected_dart_direction, collapse = ","), 
+                         "&destination=", paste(input$selected_dart_destination, collapse = ","))
+    
+    showModal(modalDialog(
+      title = "Your custom URL",
+      a(custom_url, href = custom_url),
+      easyClose = TRUE
+    ))
   })
   
   
@@ -283,7 +345,7 @@ server <- function(input, output, session) {
     input$dart_refresh
     invalidateLater(30*1000, session)
     
-    temp_info <- dart_stop_info(input$dart_selected_stops)
+    temp_info <- dart_stop_info(input$dart_selected_stop)
     
     dart_last_update_time$time <<- Sys.time()
     

@@ -98,6 +98,28 @@ dart_stop_info <- function(station_name){
 dart_stop_info("tara")
 
 
+dart_stop_info("CLONS")
+dart_stop_info("CLONF")
+dart_stop_info("CLDKN")
+
+
+dart_station_search <- function(search_string){
+  api_data <- xmlParse(paste0("http://api.irishrail.ie/realtime/realtime.asmx/getStationsFilterXML?StationText=", search_string))
+  search_info <- xmlToDataFrame(api_data)
+  
+  if(nrow(search_info)>0){
+    return(list(results = search_info[,c("StationDesc", "StationCode")], results = nrow(search_info)))
+  }else{
+    return(list(results = search_info, results = 0))
+  }
+}
+
+dart_station_search("heu")
+
+all_station_data <- xmlParse("http://api.irishrail.ie/realtime/realtime.asmx/getAllStationsXML ")
+xmlToDataFrame(all_station_data)
+
+
 
 
 
