@@ -17,15 +17,24 @@ library(rvest)
 available_bus_stops <- data_frame(longname = c("D'Olier St. - Outside Office (7b, 7d, 46a, 140, 145)", 
                                                "D'Olier St. - D'Olier House (13, 39a, 40, 123)", 
                                                "D'Olier St. - Ashfield House (9, 14, 16, 83, 83a)",
-                                               "Hawkins St. - Chaplins (15, 27, 68, 69, 120,...)"),
+                                               "Hawkins St. - Chaplins (15, 27, 68, 69, 120,...)",
+                                               "Dartry (140)",
+                                               "Rathgar (14, 15, 65b)",
+                                               "MacKenna (14, 161)"),
                                   shortname = c("D'Olier - Outside Office", 
                                                 "D'Olier - D'Olier House", 
                                                 "D'Olier - Ashfield House",
-                                                "Hawkins St."),
+                                                "Hawkins St.",
+                                                "Dartry",
+                                                "Rathgar",
+                                                "MacKenna"),
                                   number = c(334, 
                                              335, 
                                              336,
-                                             4495))
+                                             4495,
+                                             896,
+                                             1166,
+                                             4336))
 
 
 
