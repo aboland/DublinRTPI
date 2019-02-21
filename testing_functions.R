@@ -9,11 +9,27 @@
 #
 # https://data.dublinked.ie/cgi-bin/rtpi/realtimebusinformation?stopid=184
 # https://proxy.streamdata.io/https://data.dublinked.ie/cgi-bin/rtpi/realtimebusinformation?stopid=184
-
+# http://dublinbus-api.heroku.com/stops
 
 library(jsonlite)
 library(tidyverse)
 
+sample_bus <- jsonlite::fromJSON(paste0("http://dublinbus-api.heroku.com/stops/?stopid=", 334,"&format=json"))
+jsonlite::fromJSON(paste0("http://dublinbus-api.heroku.com/stops?origin=53.343488,-6.249311&range=0.2&routes=2,3"))
+jsonlite::fromJSON(paste0("http://dublinbus-api.heroku.com/services/2/0202"))
+jsonlite::fromJSON("http://dublinbus-api.heroku.com/stops/westland+row/00495")
+
+all_info <- jsonlite::fromJSON(paste0("https://data.smartdublin.ie/cgi-bin/rtpi/realtimebusinformation?stopid=", 334,"&routeid=",140,"&format=json"))
+
+
+
+stop_info <- jsonlite::fromJSON(paste0("https://data.smartdublin.ie/cgi-bin/rtpi/busstopinformation?stopid=", c(334, 335),"&format=json"))
+
+all_stop_info <- jsonlite::fromJSON(paste0("https://data.smartdublin.ie/cgi-bin/rtpi/busstopinformation?format=json"))
+head(all_stop_info$results)
+
+write.csv(all_stop_info$results[,c("stopid", "displaystopid", "shortname", "fullname", "shortnamelocalized", "fullnamelocalized")], file="ShinyApp/data/db_stop_info.csv")
+save(all_stop_info, file= "ShinyApp/data/db_stop_info.RData")
 
 db_get_stop_route_info <- function(stop_number, selected_route = NULL){
   
@@ -89,4 +105,122 @@ dart_stop_info <- function(station_name){
 
 
 dart_stop_info("tara")
+
+
+dart_stop_info("CLONS")
+dart_stop_info("CLONF")
+dart_stop_info("CLDKN")
+
+
+dart_station_search <- function(search_string){
+  api_data <- xmlParse(paste0("http://api.irishrail.ie/realtime/realtime.asmx/getStationsFilterXML?StationText=", search_string))
+  search_info <- xmlToDataFrame(api_data)
+  
+  if(nrow(search_info)>0){
+    return(list(results = search_info[,c("StationDesc", "StationCode")], results = nrow(search_info)))
+  }else{
+    return(list(results = search_info, results = 0))
+  }
+}
+
+dart_station_search("heu")
+
+all_station_data <- xmlParse("http://api.irishrail.ie/realtime/realtime.asmx/getAllStationsXML ")
+xmlToDataFrame(all_station_data)
+
+
+
+
+
+library(rvest)
+
+as_data_frame(my_mat) %>%      # convert the matrix to a data frame
+  gather(name, val, C_0:C_1) %>%  # convert the data frame from wide to long
+  select(name, time, val) 
+
+
+
+db_scrape_stop_route_info <- function(stop_number){
+  
+  test_webpage <- read_html(paste0("http://dublinbus.ie/en/RTPI/Sources-of-Real-Time-Information/?searchtype=view&searchquery=", stop_number))
+  
+  all_text <- test_webpage  %>% html_nodes('#real-time-display') %>% html_text()
+  if(length(all_text)>0){
+    tidy_text <- all_text %>% str_split("\r\n") %>% unlist() %>% str_trim()
+    
+    start_text <- which(tidy_text == "Route")
+    end_text <- which(tidy_text=="Accessible")
+    
+    useful_info <- tidy_text[start_text:(end_text-1)]
+    useful_info <- useful_info[which(useful_info!="" & useful_info != "Notes")]
+    useful_table <- matrix(useful_info[-(1:3)], ncol=3, byrow = T, dimnames = list(NULL, useful_info[1:3]))
+    return(list(results = as_data_frame(useful_table), errorcode = 0))
+  }else{
+    return(list(errorcode = 1, errormessage = "No results found"))
+  }
+}
+
+db_scrape_stop_route_info(334)
+
+
+
+db_scrape_multi_stop_info <- function(stop_numbers){
+  
+  stop_numbers = as.numeric(stop_numbers)
+  if(sum(is.na(stop_numbers))>0)
+    stop("Non numeric stop number!")
+  
+  stop_info <- list()
+  combined_info <- NULL
+    
+    for(i in 1:length(stop_numbers)){
+      
+      temp_info <- db_scrape_stop_route_info(stop_numbers[i])
+      
+      if(temp_info$errorcode == 0){
+        
+        temp_info <- temp_info$results %>% 
+          select(arrivaldatetime = `Expected Time`, destination = Destination, route = Route) %>%
+          mutate(datatime = Sys.time(), stopnumber = stop_numbers[i],
+                 arrivaldatetime = case_when(arrivaldatetime=="Due" ~ format(Sys.time(), "%H:%M"),
+                                             arrivaldatetime!="Due" ~ arrivaldatetime),
+                 arrivaldatetime = as.POSIXct(arrivaldatetime, format="%H:%M"),
+                 duetime = difftime(arrivaldatetime, Sys.time(), units = "mins") %>% round())
+        
+        # temp_info$arrivaldatetime[temp_info$arrivaldatetime=="Due"] <- format(Sys.time(), "%H:%M")
+        # temp_info$arrivaldatetime <- as.POSIXct(temp_info$arrivaldatetime, format="%H:%M")
+        # temp_info <- temp_info %>%
+        #   mutate(duetime = difftime(arrivaldatetime, Sys.time(), units = "mins") %>% round())
+        
+        if(length(which(temp_info$duetime <= 0)) > 0)
+          temp_info$duetime[which(temp_info$duetime <= 0)] <- 0
+        
+        stop_info[[i]] <- temp_info
+        combined_info <- bind_rows(combined_info, temp_info)
+      }else{
+        stop_info[[i]] <- temp_info$errormessage
+      }
+    }
+  
+  names(stop_info) <- paste0("number", stop_numbers)
+  combined_info <- combined_info %>% arrange(arrivaldatetime)
+  return(list(results = combined_info, stop = stop_info))
+}
+
+
+# db_scrape_multi_stop_info(c(334, 335, 336))
+
+sample_data2 <- db_scrape_multi_stop_info(c(334, 335, 336))
+sample_data2$results
+
+
+sample_data$results$arrivaldatetime
+as.POSIXct(sample_data$results$arrivaldatetime, format="%H:%M")
+
+sample_data2$results$arrivaldatetime
+
+sample_data2$results$arrivaldatetime[sample_data2$results$arrivaldatetime=="Due"] <- format(Sys.time(), "%H:%M")
+as.POSIXct(sample_data2$results$arrivaldatetime, format="%H:%M")
+
+
 
