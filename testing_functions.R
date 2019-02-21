@@ -22,6 +22,15 @@ jsonlite::fromJSON("http://dublinbus-api.heroku.com/stops/westland+row/00495")
 all_info <- jsonlite::fromJSON(paste0("https://data.smartdublin.ie/cgi-bin/rtpi/realtimebusinformation?stopid=", 334,"&routeid=",140,"&format=json"))
 
 
+
+stop_info <- jsonlite::fromJSON(paste0("https://data.smartdublin.ie/cgi-bin/rtpi/busstopinformation?stopid=", c(334, 335),"&format=json"))
+
+all_stop_info <- jsonlite::fromJSON(paste0("https://data.smartdublin.ie/cgi-bin/rtpi/busstopinformation?format=json"))
+head(all_stop_info$results)
+
+write.csv(all_stop_info$results[,c("stopid", "displaystopid", "shortname", "fullname", "shortnamelocalized", "fullnamelocalized")], file="ShinyApp/data/db_stop_info.csv")
+save(all_stop_info, file= "ShinyApp/data/db_stop_info.RData")
+
 db_get_stop_route_info <- function(stop_number, selected_route = NULL){
   
   if(!is.null(selected_route)){

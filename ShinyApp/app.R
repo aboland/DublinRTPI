@@ -15,6 +15,13 @@ library(rvest)
 
 
 
+load("data/db_stop_info.RData")
+available_bus_stops <- data_frame(longname = all_stop_info$results$fullname,
+                                  shortname = all_stop_info$results$shortname,
+                                  number = all_stop_info$results$stopid)
+
+
+
 all_train_station_data <- xmlParse("http://api.irishrail.ie/realtime/realtime.asmx/getAllStationsXML")
 all_train_station_data <- xmlToDataFrame(all_train_station_data, stringsAsFactors = F)
 tidy_staion_data <- all_train_station_data %>% select(station = StationDesc, code = StationCode) %>%
@@ -47,15 +54,11 @@ ui <- fluidPage(
                                                 actionButton("bus_refresh", "Refresh"),
                                                 br(),br(),
                                                 # checkboxGroupInput("db_selected_stops", label = "Choose Stops", 
-                                                                   # # choices = c("D'Olier St. - Outside Office (7b, 7d, 46a, 140, 145)" = 334, 
-                                                                   # #             "D'Olier St. - D'Olier House (13, 39a, 40, 123)" = 335, 
-                                                                   # #             "D'Olier St. - Ashfield House (9, 14, 16, 83, 83a)" = 336,
-                                                                   # #             "Hawkins St. (Chaplins)" = 4495),
-                                                                   # choiceNames = available_bus_stops$longname,
-                                                                   # choiceValues = available_bus_stops$number,
+                                                                   # choiceNames = all_stop_info$results$shortname,
+                                                                   # choiceValues = all_stop_info$results$stopid,
                                                                    # selected = c(334, 336, 4495)),
                                                 selectInput("db_selected_stops", label ="Choose Stops",
-                                                               choices=1:5000,
+                                                               choices = all_stop_info$results$stopid,
                                                                selected = c(334, 336, 4495), multiple = T),
                                                 br(),
                                                 uiOutput("selected_buses_UI"),
@@ -193,6 +196,10 @@ server <- function(input, output, session) {
       
       bus_info <- tryCatch({
         api_info <- db_scrape_multi_stop_info(isolate(input$db_selected_stops))$results
+        
+        api_info2 <- db_get_multi_stop_info(isolate(input$db_selected_stops))$results
+          
+        browser()
         list(results = api_info, error = FALSE)
       }, error = function(e){return(list(results = "Could not retrieve results", error= TRUE))}
       )
