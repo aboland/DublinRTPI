@@ -14,16 +14,19 @@ library(XML)
 library(rvest)
 
 
+# db_stop_info <- jsonlite::fromJSON(paste0("https://data.smartdublin.ie/cgi-bin/rtpi/busstopinformation?format=json"))
+# save(db_stop_info, file= "data/db_stop_info.RData")
 
 load("data/db_stop_info.RData")
-available_bus_stops <- data_frame(longname = all_stop_info$results$fullname,
-                                  shortname = all_stop_info$results$shortname,
-                                  number = all_stop_info$results$stopid)
+bus_stop_list <- as.list(db_stop_info$results$stopid)
+names(bus_stop_list) <- paste(db_stop_info$results$stopid, db_stop_info$results$fullname)
 
 
+# all_train_station_data <- xmlParse("http://api.irishrail.ie/realtime/realtime.asmx/getAllStationsXML")
+# all_train_station_data <- xmlToDataFrame(all_train_station_data, stringsAsFactors = F)
+# save(all_train_station_data, file="data/train_station_info.RData")
 
-all_train_station_data <- xmlParse("http://api.irishrail.ie/realtime/realtime.asmx/getAllStationsXML")
-all_train_station_data <- xmlToDataFrame(all_train_station_data, stringsAsFactors = F)
+load("data/train_station_info.RData")
 tidy_staion_data <- all_train_station_data %>% select(station = StationDesc, code = StationCode) %>%
   arrange(station) %>%
   mutate(code = tolower(code)) %>% distinct(station, .keep_all = TRUE)
@@ -35,13 +38,10 @@ names(tidy_station_list) <- tidy_staion_data$station
 source("helpers.R")
 
 
-# Define UI for application that draws a histogram
 ui <- fluidPage(
   
   theme="bootstrap.css",
   includeCSS("www/styles.css"),
-  
-  
   
   navbarPage("Dublin - Real Time Passenger Info", id="main_navbar",
              tabPanel("Buses", 
@@ -50,42 +50,53 @@ ui <- fluidPage(
                       ),
                       sidebarLayout(
                         sidebarPanel(width=3, 
-                                                br(),
-                                                actionButton("bus_refresh", "Refresh"),
-                                                br(),br(),
-                                                # checkboxGroupInput("db_selected_stops", label = "Choose Stops", 
-                                                                   # choiceNames = all_stop_info$results$shortname,
-                                                                   # choiceValues = all_stop_info$results$stopid,
-                                                                   # selected = c(334, 336, 4495)),
-                                                selectInput("db_selected_stops", label ="Choose Stops",
-                                                               choices = all_stop_info$results$stopid,
-                                                               selected = c(334, 336, 4495), multiple = T),
-                                                br(),
-                                                uiOutput("selected_buses_UI"),
-                                                br(),br(),
-                                                h3("Auto Refresh"),
-                                     fluidRow(
-                                       column(3, checkboxInput("auto_refresh_on", "On")),
-                                       column(9,
-                                              selectInput("interval", 
-                                                          NULL,
-                                                          # "Refresh interval",
-                                                          choices = c(
-                                                            "30 seconds" = 30,
-                                                            "1 minute" = 60,
-                                                            "2 minutes" = 120,
-                                                            "5 minutes" = 300,
-                                                            "10 minutes" = 600
-                                                          ),
-                                                          selected = 60)
-                                              )
-                                     ),
-                                                
-                                                br(),br(),
-                                                h3("Custom URL"),
-                                                p("A custom URL can be used to pre select choices when loading the app.",br(),
-                                                  "Use the button below to create a URL for the choices currently selected."),br(),
-                                                actionButton("bus_custom_url", "Create custom URL")
+                                     selectInput("db_selected_stops", label ="Choose Stops",
+                                                 choices = bus_stop_list,
+                                                 selected = c(334, 336), multiple = T),
+                                     actionButton("bus_refresh", "Refresh"),
+                                     
+                                     br(),br(),
+                                     uiOutput("selected_buses_UI"),
+                                     br(),br(),
+                                     h3("Auto Refresh"),
+                                     
+                                     # checkboxInput("auto_refresh_on", "On"),
+                                     selectInput("interval",
+                                                 NULL,
+                                                 # "Refresh interval",
+                                                 choices = c(
+                                                   "Off" = 0,
+                                                   "30 seconds" = 30,
+                                                   "1 minute" = 60,
+                                                   "2 minutes" = 120,
+                                                   "5 minutes" = 300,
+                                                   "10 minutes" = 600
+                                                 ),
+                                                 selected = 0),
+                                     
+                                     # fluidRow(
+                                     #   column(3, checkboxInput("auto_refresh_on", "On")),
+                                     #   column(9,
+                                     #          selectInput("interval",
+                                     #                      NULL,
+                                     #                      # "Refresh interval",
+                                     #                      choices = c(
+                                     #                        "Off" = 0,
+                                     #                        "30 seconds" = 30,
+                                     #                        "1 minute" = 60,
+                                     #                        "2 minutes" = 120,
+                                     #                        "5 minutes" = 300,
+                                     #                        "10 minutes" = 600
+                                     #                      ),
+                                     #                      selected = 0)
+                                     #          )
+                                     # ),
+                                     
+                                     br(),br(),
+                                     h3("Custom URL"),
+                                     p("A custom URL can be used to pre select choices when loading the app.",br(),
+                                       "Use the button below to create a URL for the choices currently selected."),br(),
+                                     actionButton("bus_custom_url", "Create custom URL")
                         ),
                         mainPanel(
                           
@@ -107,9 +118,6 @@ ui <- fluidPage(
                                      br(),br(),
                                      selectInput("dart_selected_stop", label = "Choose Stop", 
                                                  choices = tidy_station_list,
-                                                 # choices = c("Tara Street" = "tara",
-                                                 #             "Connolly" = "cnlly",
-                                                 #             "Heustion" = "hston"),
                                                  selected = "tara "),
                                      uiOutput("dart_direction"),
                                      uiOutput("dart_destination"),
@@ -188,18 +196,20 @@ server <- function(input, output, session) {
     query <- parseQueryString(session$clientData$url_search)
     
     # Only run after refresh has been clicked once or if paramters supplied
-    if(input$bus_refresh > 0 || sum(c("stops", "routes") %in% names(query))>0){  
+    if(input$bus_refresh >= 0 || sum(c("stops", "routes") %in% names(query))>0){  
       
-      if(input$auto_refresh_on)
+      # if(input$auto_refresh_on)
+      #   invalidateLater(as.numeric(input$interval) * 1000)
+      
+      if(as.numeric(input$interval)!= 0)
         invalidateLater(as.numeric(input$interval) * 1000)
       
       
       bus_info <- tryCatch({
         api_info <- db_scrape_multi_stop_info(isolate(input$db_selected_stops))$results
         
-        api_info2 <- db_get_multi_stop_info(isolate(input$db_selected_stops))$results
-          
-        browser()
+        # api_info <- db_get_multi_stop_info(isolate(input$db_selected_stops))$results
+        
         list(results = api_info, error = FALSE)
       }, error = function(e){return(list(results = "Could not retrieve results", error= TRUE))}
       )
@@ -232,9 +242,9 @@ server <- function(input, output, session) {
     
     if(!is.null(bus_times())){
       bus_routes <- bus_times() %>% 
-      distinct(Route) %>% 
-      mutate(numeric_val = gsub("[^0-9]", "", Route) %>% as.numeric()) %>% 
-      arrange(numeric_val) %>% pull(Route)
+        distinct(Route) %>% 
+        mutate(numeric_val = gsub("[^0-9]", "", Route) %>% as.numeric()) %>% 
+        arrange(numeric_val) %>% pull(Route)
     }
     
     if("Route" %in% names(bus_times())){
@@ -355,7 +365,7 @@ server <- function(input, output, session) {
     dart_last_update_time$time <<- Sys.time()
     
     return(temp_info)
-    })
+  })
   
   
   output$dart_direction <- renderUI({
