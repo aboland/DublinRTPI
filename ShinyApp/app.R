@@ -1,12 +1,3 @@
-#
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
-
 library(shiny)
 library(dplyr)
 library(stringr)
@@ -20,6 +11,7 @@ library(rvest)
 load("data/db_stop_info.RData")
 bus_stop_list <- as.list(db_stop_info$results$stopid)
 names(bus_stop_list) <- paste(db_stop_info$results$stopid, db_stop_info$results$fullname)
+
 
 
 # all_train_station_data <- xmlParse("http://api.irishrail.ie/realtime/realtime.asmx/getAllStationsXML")
@@ -73,25 +65,6 @@ ui <- fluidPage(
                                                    "10 minutes" = 600
                                                  ),
                                                  selected = 0),
-                                     
-                                     # fluidRow(
-                                     #   column(3, checkboxInput("auto_refresh_on", "On")),
-                                     #   column(9,
-                                     #          selectInput("interval",
-                                     #                      NULL,
-                                     #                      # "Refresh interval",
-                                     #                      choices = c(
-                                     #                        "Off" = 0,
-                                     #                        "30 seconds" = 30,
-                                     #                        "1 minute" = 60,
-                                     #                        "2 minutes" = 120,
-                                     #                        "5 minutes" = 300,
-                                     #                        "10 minutes" = 600
-                                     #                      ),
-                                     #                      selected = 0)
-                                     #          )
-                                     # ),
-                                     
                                      br(),br(),
                                      h3("Custom URL"),
                                      p("A custom URL can be used to pre select choices when loading the app.",br(),
@@ -99,8 +72,6 @@ ui <- fluidPage(
                                      actionButton("bus_custom_url", "Create custom URL")
                         ),
                         mainPanel(
-                          
-                          # textOutput("testText"),
                           DT::dataTableOutput("bus_table")
                         )
                       )
@@ -198,18 +169,14 @@ server <- function(input, output, session) {
     # Only run after refresh has been clicked once or if paramters supplied
     if(input$bus_refresh >= 0 || sum(c("stops", "routes") %in% names(query))>0){  
       
-      # if(input$auto_refresh_on)
-      #   invalidateLater(as.numeric(input$interval) * 1000)
-      
       if(as.numeric(input$interval)!= 0)
         invalidateLater(as.numeric(input$interval) * 1000)
       
-      
       bus_info <- tryCatch({
-        api_info <- db_scrape_multi_stop_info(isolate(input$db_selected_stops))$results
-        
         # api_info <- db_get_multi_stop_info(isolate(input$db_selected_stops))$results
         
+        api_info <- db_scrape_multi_stop_info(isolate(input$db_selected_stops))$results
+
         list(results = api_info, error = FALSE)
       }, error = function(e){return(list(results = "Could not retrieve results", error= TRUE))}
       )
@@ -341,7 +308,6 @@ server <- function(input, output, session) {
   # })
   
   observeEvent(input$dart_custom_url, {
-    # custom_url <- paste0("http://127.0.0.1:4727/?station=",input$dart_selected_stop, "&direction=", paste(input$selected_dart_direction, collapse = ","))
     
     custom_url <- paste0("http://", session$clientData[["url_hostname"]],":", session$clientData[["url_port"]],session$clientData[["url_pathname"]],
                          "?station=",input$dart_selected_stop, 
