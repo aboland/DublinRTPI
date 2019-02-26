@@ -3,22 +3,27 @@ library(dplyr)
 library(stringr)
 library(XML)
 library(rvest)
+source("helpers.R")
 
+
+ # Bus Stop Info ------- 
 
 # db_stop_info <- jsonlite::fromJSON(paste0("https://data.smartdublin.ie/cgi-bin/rtpi/busstopinformation?format=json"))
 # save(db_stop_info, file= "data/db_stop_info.RData")
 
-load("data/db_stop_info.RData")
-bus_stop_list <- as.list(db_stop_info$results$stopid)
-names(bus_stop_list) <- paste(db_stop_info$results$stopid, db_stop_info$results$fullname)
+load("data/db_stop_info.RData")  # Load local version of data
+bus_stop_list <- as.list(db_stop_info$results$stopid)  # Create list
+names(bus_stop_list) <- paste(db_stop_info$results$stopid, db_stop_info$results$fullname)  # Name list
 
 
+ # Train Stop Info -------
 
 # all_train_station_data <- xmlParse("http://api.irishrail.ie/realtime/realtime.asmx/getAllStationsXML")
 # all_train_station_data <- xmlToDataFrame(all_train_station_data, stringsAsFactors = F)
 # save(all_train_station_data, file="data/train_station_info.RData")
 
-load("data/train_station_info.RData")
+load("data/train_station_info.RData")  # Load local version of data
+ # Tidy ip data
 tidy_staion_data <- all_train_station_data %>% select(station = StationDesc, code = StationCode) %>%
   arrange(station) %>%
   mutate(code = tolower(code)) %>% distinct(station, .keep_all = TRUE)
@@ -27,15 +32,15 @@ tidy_station_list <- as.list(tidy_staion_data$code)
 names(tidy_station_list) <- tidy_staion_data$station
 
 
-source("helpers.R")
-
-
+ # Shiny UI ------- 
 ui <- fluidPage(
   
   theme="bootstrap.css",
   includeCSS("www/styles.css"),
   
-  navbarPage("Dublin - Real Time Passenger Info", id="main_navbar",
+  navbarPage("Dublin - Real Time Passenger Info", 
+             id="main_navbar",
+             
              tabPanel("Buses", 
                       fluidRow(column(3,uiOutput("currentTime", container = span)), 
                                column(3,uiOutput("db_last_update", container = span))
@@ -65,6 +70,11 @@ ui <- fluidPage(
                                                    "10 minutes" = 600
                                                  ),
                                                  selected = 0),
+                                     br(),br(),
+                                     h3("Stop Info"),
+                                     a(href="https://www.dublinbus.ie/RTPI/Sources-of-Real-Time-Information/", 
+                                       "Bus stop numbers can be found here.",
+                                       target="_blank"),
                                      br(),br(),
                                      h3("Custom URL"),
                                      p("A custom URL can be used to pre select choices when loading the app.",br(),
@@ -109,19 +119,22 @@ ui <- fluidPage(
 
 
 
-# Define server logic for app
+ # Shiny Server Side ------- 
 server <- function(input, output, session) {
   
+  # UI HTML element to display current time
   output$currentTime <- renderUI({
-    # invalidateLater causes this output to automatically
-    # become invalidated every minute
-    invalidateLater(60*1000, session)
-    input$bus_refresh  # also update when refresh clicked
+    invalidateLater(60*1000, session)  # invalidateLater causes this output to automatically become invalidated every minute
     
-    h2(paste0("Current Time: ", format(Sys.time(), "%H:%M")))
+    input$bus_refresh  # also update when refresh button is clicked
+    
+    h2(paste0("Current Time: ", format(Sys.time(), "%H:%M")))  # Retunr current time
   })
   
+  
   db_last_update_time <- reactiveValues(time = NULL)  # reactive value to store last time API was successfully called
+  
+  # UI HTML element to display time of last update
   output$db_last_update <- renderUI({
     if(!is.null(db_last_update_time$time)){
       return(h2(paste0("Last Update: ",format(db_last_update_time$time, "%H:%M"))))
@@ -130,8 +143,11 @@ server <- function(input, output, session) {
     }
   })
   
-  # This observe takes inputs from the URL and updates the checkboxes for
-  # the selected routes and buses.
+  
+  
+  # Bus ----------
+  
+  # This observe takes inputs from the URL and updates the checkboxes with the selected routes and buses.
   # This allows a user to start with their custom routes and buses selected.
   observe({
     query <- parseQueryString(session$clientData$url_search)
@@ -146,9 +162,12 @@ server <- function(input, output, session) {
     }
   })
   
-  
+  # Will execute when the custom URL button is clicked
   observeEvent(input$bus_custom_url, {
-    custom_url <- paste0("http://", session$clientData[["url_hostname"]],":", session$clientData[["url_port"]],session$clientData[["url_pathname"]],
+    # Create the custom URL
+    custom_url <- paste0("http://", session$clientData[["url_hostname"]],":", 
+                         session$clientData[["url_port"]],
+                         session$clientData[["url_pathname"]],
                          "?stops=",paste(input$db_selected_stops, collapse = ","), 
                          "&routes=", paste(input$db_selected_buses, collapse = ","))
     
@@ -235,15 +254,14 @@ server <- function(input, output, session) {
   
   
   
-  # This is the table of bus times which is displayed in the app
+  # Table of bus times which is displayed in the app
   output$bus_table <- DT::renderDataTable({
     if(!is.null(input$db_selected_buses)){
       return(bus_times() %>% filter(Route %in% input$db_selected_buses))
     }else{
       return(bus_times())
     }
-    
-  }, options = list(dom = "ti", 
+  }, rownames=F, options = list(dom = "ti", 
                     pageLength=100, lengthMenu=c(10, 50 ,100),
                     # columnDefs = list(list(className = 'dt-center', targets = 3)),
                     initComplete = DT::JS(
@@ -251,8 +269,7 @@ server <- function(input, output, session) {
                       "$(this.api().table().header()).css({'background-color': '#000', 'color': '#fff'});",
                       "}"),
                     # scrollY = "88vh", scrollX = TRUE,
-                    scrollCollapse=TRUE), 
-  rownames=F)
+                    scrollCollapse=TRUE))
   
   
   
@@ -262,18 +279,12 @@ server <- function(input, output, session) {
   
   
   
-  # --------------------------------------------------------------------------------------------
-  #
-  #      DART
-  #
-  # -------------------------------------------------------------------------------------------
-  
+  # DART ----------
   
   output$dart_currentTime <- renderUI({
-    # invalidateLater causes this output to automatically
-    # become invalidated every minute
-    invalidateLater(30*1000, session)
-    input$dart_refresh
+    invalidateLater(30*1000, session) # invalidateLater causes this output to automatically become invalidated every minute
+    
+    input$dart_refresh  # Also update when refreseh is clicked
     
     h2(paste0("Current Time: ", format(Sys.time(), "%H:%M")))
   })
@@ -292,7 +303,6 @@ server <- function(input, output, session) {
     query <- parseQueryString(session$clientData$url_search)
     if(sum(c("direction", "destination", "station") %in% names(query)) > 0){
       updateNavbarPage(session, "main_navbar", selected = "Dart")
-      # browser()
       updateSelectInput(session, "dart_selected_stop", selected = query$station)
       # selected_direction <- unlist(strsplit(query$direction, ","))
       # updateCheckboxGroupInput(session, "selected_dart_direction", selected = selected_direction)
@@ -300,16 +310,11 @@ server <- function(input, output, session) {
   })
   
   
-  
-  # observe({
-  #   session$sendCustomMessage(type = 'testmessage',
-  #                             message = list(a = 1, b = 'text',
-  #                                            controller = input$dart_custom_url))
-  # })
-  
   observeEvent(input$dart_custom_url, {
     
-    custom_url <- paste0("http://", session$clientData[["url_hostname"]],":", session$clientData[["url_port"]],session$clientData[["url_pathname"]],
+    custom_url <- paste0("http://", session$clientData[["url_hostname"]],":", 
+                         session$clientData[["url_port"]],
+                         session$clientData[["url_pathname"]],
                          "?station=",input$dart_selected_stop, 
                          "&direction=", paste(input$selected_dart_direction, collapse = ","), 
                          "&destination=", paste(input$selected_dart_destination, collapse = ","))
@@ -355,9 +360,9 @@ server <- function(input, output, session) {
                        inline = T)
   })
   
+  # UI to display possible desintations
   output$dart_destination <- renderUI({
-    
-    possible_destinations <- unique(dart_times()$Destination)
+    possible_destinations <- unique(dart_times()$Destination)  # Possible destinations to choose from
     
     if(is.null(input$selected_dart_destination)){
       query <- parseQueryString(session$clientData$url_search)
@@ -369,13 +374,13 @@ server <- function(input, output, session) {
     }else{
       selected_destinations <-input$selected_dart_destination
     }
-    
     checkboxGroupInput("selected_dart_destination", "Destination",
                        choices = possible_destinations,
                        selected = selected_destinations)
   })
   
   
+  # Data to display in the table of dart times
   dart_table <- reactive({
     dart_table <- dart_times()
     
@@ -389,12 +394,10 @@ server <- function(input, output, session) {
   })
   
   
-  
+  # UI table to display dart times
   output$dart_table <- DT::renderDataTable({
-    
     dart_table()
-    
-  }, options = list(dom = "ti", 
+  }, rownames=F, options = list(dom = "ti", 
                     pageLength=100,
                     # columnDefs = list(list(className = 'dt-center', targets = 3)),
                     initComplete = DT::JS(
@@ -402,11 +405,7 @@ server <- function(input, output, session) {
                       "$(this.api().table().header()).css({'background-color': '#000', 'color': '#fff'});",
                       "}"),
                     # scrollY = "88vh", scrollX = TRUE,
-                    scrollCollapse=TRUE), 
-  rownames=F)
-  
-  
-  
+                    scrollCollapse=TRUE))
 }
 
 # Run the application 
