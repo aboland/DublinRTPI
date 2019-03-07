@@ -19,10 +19,14 @@ Example: [http://aboland.shinyapps.io:/DublinTransport/?stops=334,336&routes=14,
 
 ### Run Locally
 
-The Shiny app can be run locally from within R or RStudio. *The Shiny library must be installed.*  
+The Shiny app can be run locally from within R or RStudio. *The [Shiny](https://shiny.rstudio.com/) library must be installed.*  
 
 ```r
 # install.packages("shiny")
 library(shiny)  
 runGitHub("aboland/DublinRTPI", subdir = "ShinyApp")
-```
+```  
+
+#### Other Dependencies
+
+The app also relies on the following packages, [`dplyr`](https://dplyr.tidyverse.org/), [`stringr`](https://cran.r-project.org/web/packages/stringr/vignettes/stringr.html), [`XML`](https://cran.r-project.org/web/packages/XML/index.html), and [`rvest`](https://cran.r-project.org/web/packages/rvest/).

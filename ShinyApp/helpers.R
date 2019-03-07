@@ -1,6 +1,8 @@
 
-
-# Function to access Dublin Bus RTPI API
+ #
+ # ------ Function to access Dublin Bus RTPI API ------
+ #
+ 
 db_get_multi_stop_info <- function(stop_numbers){
   
   # Check that the input stop numbers are numeric
@@ -47,9 +49,8 @@ db_get_multi_stop_info <- function(stop_numbers){
 
 
  #
- # -------------------------------  Scraping version -------------------------------
+ # -------------- Scraping version for Dublin Bus RTPI from dublinbus.com -----------------
  #
-
 
 db_scrape_stop_route_info <- function(stop_number){
   
@@ -140,7 +141,6 @@ db_scrape_multi_stop_info <- function(stop_numbers){
  #
  # ------------------------------- Dart -------------------------------
  #
-
 
 dart_stop_info <- function(station_name){
   api_data <- xmlParse(paste0("http://api.irishrail.ie/realtime/realtime.asmx/getStationDataByCodeXML?StationCode=", station_name))
