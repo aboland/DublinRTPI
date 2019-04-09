@@ -315,7 +315,7 @@ server <- function(input, output, session) {
     
     input$dart_refresh  # Also update when refreseh is clicked
     
-    h2(paste0("Current Time: ", format(Sys.time(), "%H:%M")))
+    h2(paste0("Current Time: ", format(Sys.time()-(60*60), "%H:%M")))  # Updated for summer time
   })
   
   dart_last_update_time <-
