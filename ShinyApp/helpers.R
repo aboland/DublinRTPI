@@ -27,7 +27,7 @@ db_get_multi_stop_info <- function(stop_numbers){
         # If no error then tidy up data
         temp_info <- temp_info$results %>% 
           select(arrivaldatetime, duetime, departureduetime, destination, route, monitored, sourcetimestamp) %>%
-          mutate(datatime = Sys.time(), stopnumber = stop_numbers[i])
+          mutate(datatime = Sys.time() + (60 * 60), stopnumber = stop_numbers[i])
         stop_info[[i]] <- temp_info
         combined_info <- bind_rows(combined_info, temp_info)
       }else{
@@ -100,11 +100,11 @@ db_scrape_multi_stop_info <- function(stop_numbers){
     if(temp_info$errorcode == 0){
       temp_info <- temp_info$results %>% 
         select(arrivaldatetime = `Expected Time`, destination = Destination, route = Route) %>%
-        mutate(datatime = Sys.time(), stopnumber = stop_numbers[i],
-               arrivaldatetime = case_when(arrivaldatetime=="Due" ~ format(Sys.time(), "%H:%M"),
+        mutate(datatime = Sys.time() + (60 * 60), stopnumber = stop_numbers[i],
+               arrivaldatetime = case_when(arrivaldatetime=="Due" ~ format(Sys.time()  - (60 * 60), "%H:%M"),
                                            arrivaldatetime!="Due" ~ arrivaldatetime),
                arrivaldatetime = as.POSIXct(arrivaldatetime, format="%H:%M"),
-               duetime = difftime(arrivaldatetime, Sys.time(), units = "mins") %>% round())
+               duetime = difftime(arrivaldatetime, Sys.time() + (60 * 60), units = "mins") %>% round())
       
       
       #   mutate(datatime = Sys.time(), stopnumber = stop_numbers[i])

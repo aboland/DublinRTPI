@@ -137,7 +137,7 @@ server <- function(input, output, session) {
     
     input$bus_refresh  # also update when refresh button is clicked
     
-    h2(paste0("Current Time: ", format(Sys.time(), "%H:%M")))  # Retunr current time
+    h2(paste0("Current Time: ", format(Sys.time() + (60 * 60), "%H:%M")))  # Retunr current time
   })
   
   
@@ -237,7 +237,7 @@ server <- function(input, output, session) {
             EstimatedArrival = duetime
           )  # , ArrivalLastUpdate = datatime, LastBusContact = lastbuscontact
         
-        db_last_update_time$time <<- Sys.time()
+        db_last_update_time$time <<- Sys.time() + (60 * 60)
       } else{
         bus_info_tidy <- data_frame(error = bus_info$results)
       }
@@ -315,7 +315,7 @@ server <- function(input, output, session) {
     
     input$dart_refresh  # Also update when refreseh is clicked
     
-    h2(paste0("Current Time: ", format(Sys.time()-(60*60), "%H:%M")))  # Updated for summer time
+    h2(paste0("Current Time: ", format(Sys.time() + (60 * 60), "%H:%M")))  # Updated for summer time
   })
   
   dart_last_update_time <-
@@ -371,7 +371,7 @@ server <- function(input, output, session) {
     
     temp_info <- dart_stop_info(input$dart_selected_stop)
     
-    dart_last_update_time$time <<- Sys.time()
+    dart_last_update_time$time <<- Sys.time() + (60 * 60)
     
     return(temp_info)
   })
