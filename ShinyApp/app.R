@@ -33,15 +33,9 @@ ui <- fluidPage(
       sidebarLayout(
         sidebarPanel(
           width = 3,
-          selectInput(
-            "db_selected_stops",
-            label = "Choose Stops",
-            choices = bus_stop_list,
-            selected = c(334, 336),
-            multiple = T
-          ),
+          uiOutput("selected_stops_UI"),
           actionButton("bus_refresh", "Refresh"),
-          
+
           br(),
           br(),
           uiOutput("selected_buses_UI"),
@@ -131,6 +125,7 @@ ui <- fluidPage(
 
 # Shiny Server Side -------
 server <- function(input, output, session) {
+  
   # UI HTML element to display current time
   output$currentTime <- renderUI({
     invalidateLater(60 * 1000, session)  # invalidateLater causes this output to automatically become invalidated every minute
@@ -160,21 +155,6 @@ server <- function(input, output, session) {
   
   # Bus ----------
   
-  # This observe takes inputs from the URL and updates the checkboxes with the selected routes and buses.
-  # This allows a user to start with their custom routes and buses selected.
-  observe({
-    query <- parseQueryString(session$clientData$url_search)
-    if ("stops" %in% names(query)) {
-      selected_stops <- unlist(strsplit(query$stops, ","))
-      updateSelectInput(session, "db_selected_stops", selected = selected_stops)
-    }
-    
-    if ("routes" %in% names(query)) {
-      selected_routes <- unlist(strsplit(query$routes, ","))
-      updateCheckboxGroupInput(session, "db_selected_buses", selected = selected_routes)
-    }
-  })
-  
   # Will execute when the custom URL button is clicked
   observeEvent(input$bus_custom_url, {
     # Create the custom URL
@@ -199,15 +179,78 @@ server <- function(input, output, session) {
   })
   
   
+  # The following creates the input box displaying the possible bus routes
+  # If routes are included in the header these will be displayed as default
+  output$selected_stops_UI <- renderUI({
+    isolate({
+      # Check if there are routes already selected
+      if (is.null(input$db_selected_stops)) {
+        query <- parseQueryString(session$clientData$url_search)
+        if ("routes" %in% names(query)) {
+          selected_stops <- unlist(strsplit(query$stops, ","))
+        } else{
+          selected_stops <- c(334, 336)  # Use as default
+        }
+      } else{
+        selected_stops <- input$db_selected_stops
+      }
+      
+      return(
+        selectizeInput("db_selected_stops",
+                       label = "Choose Stops",
+                       choices = bus_stop_list,  # bus_stop_list is loaded when the app starts
+                       selected = selected_stops,
+                       multiple = T, 
+                       options = list(plugins = list('remove_button'))
+        )
+      )
+    })
+  })
+  
+  
+  # The idea of this is to update the list of possible bus routes depending on
+  # which routes are selected
+  output$selected_buses_UI <- renderUI({
+    if (!is.null(bus_times())) {
+      bus_routes <- bus_times() %>%
+        distinct(Route) %>%
+        mutate(numeric_val = gsub("[^0-9]", "", Route) %>% as.numeric()) %>%
+        arrange(numeric_val) %>% pull(Route)
+    }
+    
+    if ("Route" %in% names(bus_times())) {
+      # Check if buses already selected
+      if (is.null(input$db_selected_buses)) {
+        query <- parseQueryString(session$clientData$url_search)
+        if ("routes" %in% names(query)) {
+          selected_routes <- unlist(strsplit(query$routes, ","))
+        } else{
+          selected_routes <- bus_routes
+        }
+      } else{
+        selected_routes <- input$db_selected_buses
+      }
+      
+      checkboxGroupInput(
+        "db_selected_buses",
+        label = "Choose Routes",
+        choices = bus_routes,
+        selected = selected_routes,
+        inline = TRUE
+      )
+    }
+  })
+
   
   
   # Collect the bus times and tidy up times for the output table
   bus_times <- reactive({
     query <- parseQueryString(session$clientData$url_search)
     
-    # Only run after refresh has been clicked once or if paramters supplied
-    if (input$bus_refresh >= 0 ||
-        sum(c("stops", "routes") %in% names(query)) > 0) {
+    # Only run after refresh has been clicked once and at least one stop selected
+    if (input$bus_refresh >= 0  && 
+        !is.null(input$db_selected_stops)) {  # This last boolean also causes the app to auto refresh when bus stop is selected/deleted
+      
       if (as.numeric(input$interval) != 0)
         invalidateLater(as.numeric(input$interval) * 1000)
       
@@ -248,44 +291,9 @@ server <- function(input, output, session) {
   })
   
   
-  
-  # The idea of this is to update the list of possible bus routes depending on
-  # which routes are selected
-  output$selected_buses_UI <- renderUI({
-    if (!is.null(bus_times())) {
-      bus_routes <- bus_times() %>%
-        distinct(Route) %>%
-        mutate(numeric_val = gsub("[^0-9]", "", Route) %>% as.numeric()) %>%
-        arrange(numeric_val) %>% pull(Route)
-    }
-    
-    if ("Route" %in% names(bus_times())) {
-      if (is.null(input$db_selected_buses)) {
-        query <- parseQueryString(session$clientData$url_search)
-        if ("routes" %in% names(query)) {
-          selected_routes <- unlist(strsplit(query$routes, ","))
-        } else{
-          selected_routes <- bus_routes
-        }
-      } else{
-        selected_routes <- input$db_selected_buses
-      }
-      
-      checkboxGroupInput(
-        "db_selected_buses",
-        label = "Choose Routes",
-        choices = bus_routes,
-        selected = selected_routes,
-        inline = TRUE
-      )
-    }
-  })
-  
-  
-  
   # Table of bus times which is displayed in the app
   output$bus_table <- DT::renderDataTable({
-    if (!is.null(input$db_selected_buses)) {
+    if (!is.null(input$db_selected_buses) && !is.null(bus_times())) {
       return(bus_times() %>% filter(Route %in% input$db_selected_buses))
     } else{
       return(bus_times())
