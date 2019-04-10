@@ -1,8 +1,8 @@
 
- #
- # ------ Function to access Dublin Bus RTPI API ------
- #
- 
+#
+# ------ Function to access Dublin Bus RTPI API ------
+#
+
 db_get_multi_stop_info <- function(stop_numbers){
   
   # Check that the input stop numbers are numeric
@@ -21,21 +21,29 @@ db_get_multi_stop_info <- function(stop_numbers){
       incProgress(0, detail = paste0("Getting stop ", stop_numbers[i], " info"))
       
       # Call API
-      temp_info <- jsonlite::fromJSON(paste0("https://data.smartdublin.ie/cgi-bin/rtpi/realtimebusinformation?stopid=", stop_numbers[i],"&format=json"))
+      get_info <- httr::GET(paste0("https://data.smartdublin.ie/cgi-bin/rtpi/realtimebusinformation?stopid=", stop_numbers[i],"&format=json"))
       
-      if(temp_info$errorcode == 0){
-        # If no error then tidy up data
-        temp_info <- temp_info$results %>% 
-          select(arrivaldatetime, duetime, departureduetime, destination, route, monitored, sourcetimestamp) %>%
-          mutate(datatime = Sys.time() + (60 * 60), stopnumber = stop_numbers[i])
-        stop_info[[i]] <- temp_info
-        combined_info <- bind_rows(combined_info, temp_info)
+      if(get_info$status_code == 200){
+        temp_info <- jsonlite::fromJSON(httr::content(get_info, "text"))
+        
+        # temp_info <- jsonlite::fromJSON(paste0("https://data.smartdublin.ie/cgi-bin/rtpi/realtimebusinformation?stopid=", stop_numbers[i],"&format=json"))
+        
+        if(temp_info$errorcode == 0){
+          # If no error then tidy up data
+          temp_info <- temp_info$results %>% 
+            select(arrivaldatetime, duetime, departureduetime, destination, route, monitored, sourcetimestamp) %>%
+            mutate(datatime = Sys.time() + (60 * 60), stopnumber = stop_numbers[i])
+          stop_info[[i]] <- temp_info
+          combined_info <- bind_rows(combined_info, temp_info)
+        }else{
+          # If error return the error message
+          stop_info[[i]] <- temp_info$errormessage
+        }
+        # increase progress bar indicator
+        incProgress(1/length(stop_numbers))
       }else{
-        # If error return the error message
-        stop_info[[i]] <- temp_info$errormessage
+        stop("Unexpected http response ", get_info$status_code)
       }
-      # increase progress bar indicator
-      incProgress(1/length(stop_numbers))
     }
   })
   names(stop_info) <- paste0("number", stop_numbers)

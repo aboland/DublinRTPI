@@ -3,6 +3,7 @@ library(dplyr)
 library(stringr)
 library(XML)
 library(rvest)
+library(httr)
 source("helpers.R")
 
 
@@ -255,10 +256,11 @@ server <- function(input, output, session) {
         invalidateLater(as.numeric(input$interval) * 1000)
       
       bus_info <- tryCatch({
-        # api_info <- db_get_multi_stop_info(isolate(input$db_selected_stops))$results
-        
         api_info <-
-          db_scrape_multi_stop_info(isolate(input$db_selected_stops))$results
+          db_get_multi_stop_info(isolate(input$db_selected_stops))$results
+        
+        # api_info <-
+        #   db_scrape_multi_stop_info(isolate(input$db_selected_stops))$results
         
         list(results = api_info, error = FALSE)
       }, error = function(e) {
