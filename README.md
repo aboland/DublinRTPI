@@ -6,6 +6,8 @@ Code to retrieve real time information about Dublin Bus and Dart services. Allow
 **No Luas info currently.**
 
 
+***
+
 ## Shiny App
 
 The code located in [ShinyApp](/ShinyApp) is an interactive app which will retrieve and display information about the bus and train services in Dublin.  
@@ -23,21 +25,22 @@ The Shiny app can be run locally from within R or R Studio. *The [shiny](https:/
 
 ```r
 # install.packages("shiny")
-
 shiny::runGitHub("aboland/DublinRTPI", subdir = "ShinyApp")
 ```  
 
 #### Other Dependencies
 
-The app also relies on the following packages, [`dplyr`](https://dplyr.tidyverse.org/), [`stringr`](https://cran.r-project.org/web/packages/stringr/vignettes/stringr.html), [`XML`](https://cran.r-project.org/web/packages/XML/index.html), and [`rvest`](https://cran.r-project.org/web/packages/rvest/).
+The app also relies on the following packages, [`dplyr`](https://dplyr.tidyverse.org/), [`stringr`](https://cran.r-project.org/web/packages/stringr/vignettes/stringr.html), [`XML`](https://cran.r-project.org/web/packages/XML/index.html), and [`rvest`](https://cran.r-project.org/web/packages/rvest/).  
 
 
 
-## `dublinRTPI` Library
+***
 
-The code located in [Rlib](/Rlib) contains an R library named `dublinRTPI`. This can be installed using the `devtools` package.  
+## R Package
 
-The library contains functions to retrieve live info for Dart and Dublin Bus. A light version of the main shiny app is also included in the library.
+The code located in [Rlib](/Rlib) contains an R package named `dublinRTPI`. This can be installed using the `devtools` package.  
+
+The package contains functions to retrieve live info for Dart and Dublin Bus. A light version of the main shiny app is also included in the package.
 
 ```r
 # install.packages("devtools")
