@@ -127,6 +127,9 @@ ui <- fluidPage(
 # Shiny Server Side -------
 server <- function(input, output, session) {
   
+  # Set this to "force" instead of TRUE for testing locally (without Shiny Server)
+  session$allowReconnect("force")
+  
   # UI HTML element to display current time
   output$currentTime <- renderUI({
     invalidateLater(60 * 1000, session)  # invalidateLater causes this output to automatically become invalidated every minute
