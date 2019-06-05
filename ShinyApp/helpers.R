@@ -14,11 +14,11 @@ db_get_multi_stop_info <- function(stop_numbers){
   combined_info <- NULL
   
   # Progress function will only work in Shiny
-  withProgress(message = 'Updating data', value = 0.1, {
+  # withProgress(message = 'Updating data', value = 0.1, {
     # Loop over all bus stops
     for(i in 1:length(stop_numbers)){
       # Update progress bar message
-      incProgress(0, detail = paste0("Getting stop ", stop_numbers[i], " info"))
+      # incProgress(0, detail = paste0("Getting stop ", stop_numbers[i], " info"))
       
       # Call API
       get_info <- httr::GET(paste0("https://data.smartdublin.ie/cgi-bin/rtpi/realtimebusinformation?stopid=", stop_numbers[i],"&format=json"))
@@ -44,10 +44,14 @@ db_get_multi_stop_info <- function(stop_numbers){
       }else{
         stop("Unexpected http response ", get_info$status_code)
       }
+      # increase progress bar indicator
+      # incProgress(1/length(stop_numbers))
     }
-  })
+  # })
   names(stop_info) <- paste0("number", stop_numbers)
-  combined_info <- combined_info %>% arrange(arrivaldatetime)
+  if(!is.null(combined_info))
+    combined_info <- combined_info %>% arrange(arrivaldatetime)
+  
   return(list(results = combined_info, stop = stop_info))
 }
 
