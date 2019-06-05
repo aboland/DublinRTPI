@@ -39,7 +39,9 @@ db_get_multi_stop_info <- function(stop_numbers){
     }
   })
   names(stop_info) <- paste0("number", stop_numbers)
-  combined_info <- combined_info %>% arrange(arrivaldatetime)
+  if(!is.null(combined_info))
+    combined_info <- combined_info %>% arrange(arrivaldatetime)
+  
   return(list(results = combined_info, stop = stop_info))
 }
 
