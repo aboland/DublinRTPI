@@ -33,6 +33,9 @@ ui <- fluidPage(
       sidebarLayout(
         sidebarPanel(
           width = 3,
+
+          # checkboxInput("api_yn", "Use API", value = T),
+          
           selectizeInput(
             "db_selected_stops",
             label = "Choose Stops",
@@ -213,10 +216,14 @@ server <- function(input, output, session) {
         invalidateLater(as.numeric(input$interval) * 1000)
       
       bus_info <- tryCatch({
-        api_info <- db_get_multi_stop_info(isolate(input$db_selected_stops))$results
-        
-        # api_info <-
-        #   db_scrape_multi_stop_info(isolate(input$db_selected_stops))$results
+
+        # if(input$api_yn){
+          api_info <-
+            db_get_multi_stop_info(isolate(input$db_selected_stops))$results
+        # }else{
+        #   api_info <-
+        #     db_scrape_multi_stop_info(isolate(input$db_selected_stops))$results
+        # }
         
         list(results = api_info, error = FALSE)
       }, error = function(e) {
