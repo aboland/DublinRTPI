@@ -4,14 +4,8 @@ library(stringr)
 library(XML)
 library(rvest)
 library(httr)
-source("helpers.R")
 
-
-# Bus Stop Info -------
-load("data/db_stop_list.RData")  # Load local version of data
-
-# Train Stop Info -------
-load("data/train_station_list.RData")  # Load local version of data
+library(dublinRTPI)
 
 
 # Shiny UI -------
@@ -127,9 +121,6 @@ ui <- fluidPage(
 # Shiny Server Side -------
 server <- function(input, output, session) {
   
-  # Set this to "force" instead of TRUE for testing locally (without Shiny Server)
-  session$allowReconnect("force")
-  
   # UI HTML element to display current time
   output$currentTime <- renderUI({
     invalidateLater(60 * 1000, session)  # invalidateLater causes this output to automatically become invalidated every minute
@@ -215,7 +206,7 @@ server <- function(input, output, session) {
   # The idea of this is to update the list of possible bus routes depending on
   # which routes are selected
   output$selected_buses_UI <- renderUI({
-    if (!is.null(bus_times())) {
+    if (!is.null(bus_times()) && (!"error" %in% names(bus_times()))) {
       bus_routes <- bus_times() %>%
         distinct(Route) %>%
         mutate(numeric_val = gsub("[^0-9]", "", Route) %>% as.numeric()) %>%
@@ -260,10 +251,10 @@ server <- function(input, output, session) {
       
       bus_info <- tryCatch({
         api_info <-
-          db_get_multi_stop_info(isolate(input$db_selected_stops))$results
+          db_info(isolate(input$db_selected_stops))$results
         
         # api_info <-
-        #   db_scrape_multi_stop_info(isolate(input$db_selected_stops))$results
+        #   db_scrape_info(isolate(input$db_selected_stops))$results
         
         list(results = api_info, error = FALSE)
       }, error = function(e) {
@@ -382,7 +373,7 @@ server <- function(input, output, session) {
     input$dart_refresh
     invalidateLater(30 * 1000, session)
     
-    temp_info <- dart_stop_info(input$dart_selected_stop)
+    temp_info <- dart_info(input$dart_selected_stop)
     
     dart_last_update_time$time <<- Sys.time() + (60 * 60)
     
