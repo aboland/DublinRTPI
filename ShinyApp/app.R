@@ -34,9 +34,10 @@ ui <- fluidPage(
       sidebarLayout(
         sidebarPanel(
           width = 3,
+
           uiOutput("selected_stops_UI"),
           actionButton("bus_refresh", "Refresh"),
-
+          
           br(),
           br(),
           uiOutput("selected_buses_UI"),
@@ -132,11 +133,12 @@ server <- function(input, output, session) {
   
   # UI HTML element to display current time
   output$currentTime <- renderUI({
-    invalidateLater(60 * 1000, session)  # invalidateLater causes this output to automatically become invalidated every minute
+    invalidateLater(20 * 1000, session)  # invalidateLater causes this output to automatically become invalidated every 20 seconds
+    db_last_update_time$time  # also updates when the last update is updated.
     
     input$bus_refresh  # also update when refresh button is clicked
     
-    h2(paste0("Current Time: ", format(Sys.time() + (60 * 60), "%H:%M")))  # Retunr current time
+    h2(paste0("Current Time: ", format(Sys.time() + (60 * 60), "%H:%M")))  # Return current time
   })
   
   
@@ -244,7 +246,7 @@ server <- function(input, output, session) {
       )
     }
   })
-
+  
   
   
   # Collect the bus times and tidy up times for the output table
@@ -259,13 +261,17 @@ server <- function(input, output, session) {
         invalidateLater(as.numeric(input$interval) * 1000)
       
       bus_info <- tryCatch({
+
         api_info <-
-          db_get_multi_stop_info(isolate(input$db_selected_stops))$results
+          db_get_multi_stop_info(isolate(input$db_selected_stops))
         
-        # api_info <-
-        #   db_scrape_multi_stop_info(isolate(input$db_selected_stops))$results
+        # If API fails then use scraping method to retrieve bus info
+        if(api_info$api_status != 200){
+          api_info <-
+            db_scrape_multi_stop_info(isolate(input$db_selected_stops))
+        }
         
-        list(results = api_info, error = FALSE)
+        list(results = api_info$results, error = FALSE)
       }, error = function(e) {
         return(list(results = "Could not retrieve results", error = TRUE))
       })
@@ -450,7 +456,7 @@ server <- function(input, output, session) {
       dart_table <-
         dart_table %>% filter(Destination %in% input$selected_dart_destination)
     
-    dart_table <-
+    dart_table <- 
       dart_table %>% select(
         Due = Duein,
         Destination,
