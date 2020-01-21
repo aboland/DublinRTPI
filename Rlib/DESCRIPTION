@@ -12,12 +12,14 @@ Encoding: UTF-8
 LazyData: true
 Imports:
   dplyr,
-  stringr,
-  XML,
-  rvest,
   httr,
   jsonlite,
-  xml2,
+  RCurl,
   rlang,
-  shiny
+  rvest,
+  shiny,
+  stringr,
+  testthat,
+  XML,
+  xml2
 RoxygenNote: 7.0.2
