@@ -14,7 +14,7 @@
 db_scrape_info <-
 function(stop_numbers){
   
-  stop_numbers = as.numeric(stop_numbers)
+  stop_numbers = suppressWarnings(as.numeric(stop_numbers))
   if (sum(is.na(stop_numbers)) > 0)
     stop("Non numeric stop number!")
   

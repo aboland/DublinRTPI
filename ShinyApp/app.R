@@ -217,7 +217,7 @@ server <- function(input, output, session) {
   # The idea of this is to update the list of possible bus routes depending on
   # which routes are selected
   output$selected_buses_UI <- renderUI({
-    if (!is.null(bus_times())) {
+    if (!is.null(bus_times()) && !("error" %in% names(bus_times()))) {
       bus_routes <- bus_times() %>%
         distinct(Route) %>%
         mutate(numeric_val = gsub("[^0-9]", "", Route) %>% as.numeric()) %>%
@@ -295,16 +295,17 @@ server <- function(input, output, session) {
       } else{
         bus_info_tidy <- data_frame(error = bus_info$results)
       }
-      
       return(bus_info_tidy)
-      
     }
   })
   
   
   # Table of bus times which is displayed in the app
   output$bus_table <- DT::renderDataTable({
-    if (!is.null(input$db_selected_buses) && !is.null(bus_times())) {
+    if (!is.null(input$db_selected_buses) && 
+        !is.null(bus_times()) && 
+        !("error" %in% names(bus_times()))
+        ) {
       return(bus_times() %>% filter(Route %in% input$db_selected_buses))
     } else{
       return(bus_times())
