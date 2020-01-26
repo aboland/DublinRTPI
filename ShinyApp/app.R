@@ -132,16 +132,15 @@ server <- function(input, output, session) {
   
   # UI HTML element to display current time
   output$currentTime <- renderUI({
-    invalidateLater(60 * 1000, session)  # invalidateLater causes this output to automatically become invalidated every minute
+    invalidateLater(20 * 1000, session)  # invalidateLater causes this output to automatically become invalidated every 20 seconds
     
     input$bus_refresh  # also update when refresh button is clicked
     
-    h2(paste0("Current Time: ", format(Sys.time() + (60 * 60), "%H:%M")))  # Retunr current time
+    h2(paste0("Current Time: ", format(Sys.time() + (60 * 60), "%H:%M")))  # Return current time
   })
   
   
-  db_last_update_time <-
-    reactiveValues(time = NULL)  # reactive value to store last time API was successfully called
+  db_last_update_time <- reactiveValues(time = NULL)  # reactive value to store last time API was successfully called
   
   # UI HTML element to display time of last update
   output$db_last_update <- renderUI({
@@ -250,7 +249,7 @@ server <- function(input, output, session) {
   # Collect the bus times and tidy up times for the output table
   bus_times <- reactive({
     query <- parseQueryString(session$clientData$url_search)
-    
+    input$bus_refresh
     # Only run after refresh has been clicked once and at least one stop selected
     if (input$bus_refresh >= 0  && 
         !is.null(input$db_selected_stops)) {  # This last boolean also causes the app to auto refresh when bus stop is selected/deleted
@@ -259,8 +258,7 @@ server <- function(input, output, session) {
         invalidateLater(as.numeric(input$interval) * 1000)
       
       bus_info <- tryCatch({
-        api_info <-
-          db_get_multi_stop_info(isolate(input$db_selected_stops))$results
+        api_info <- db_get_multi_stop_info(isolate(input$db_selected_stops))$results
         
         # api_info <-
         #   db_scrape_multi_stop_info(isolate(input$db_selected_stops))$results
@@ -269,6 +267,18 @@ server <- function(input, output, session) {
       }, error = function(e) {
         return(list(results = "Could not retrieve results", error = TRUE))
       })
+      
+      if (bus_info$error){
+        scrape_attempt <- tryCatch({
+          scrape_info <- db_scrape_multi_stop_info(isolate(input$db_selected_stops))$results
+          list(results = scrape_info, error = FALSE)
+        }, error = function(e) {
+          return(list(error = TRUE))
+        })
+        if(!scrape_attempt$error){
+          bus_info <- scrape_attempt
+        }
+      }
       
       # bus_info <- list(results= sample_bus_info, error= FALSE)
       
