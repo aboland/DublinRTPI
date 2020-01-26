@@ -1,6 +1,7 @@
 # Custom
 .DS_Store
 ignore.R
+ignore/
 
 # History files
 .Rhistory

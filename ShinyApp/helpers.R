@@ -7,7 +7,7 @@ db_get_multi_stop_info <- function(stop_numbers){
   
   # Check that the input stop numbers are numeric
   stop_numbers = as.numeric(stop_numbers)
-  if(sum(is.na(stop_numbers))>0)
+  if(sum(is.na(stop_numbers)) > 0)
     stop("Non numeric stop number!")
   
   stop_info <- list()

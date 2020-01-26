@@ -1,11 +1,19 @@
 language: r
+cache: packages
 
 before_install:
   - cd Rlib
 
-r_packages:
-  - covr
-
-after_success:
-  - Rscript -e 'library(covr); codecov()'
+matrix:
+  include:
+  - r: devel
+    os: linux
+  - r: release
+    os: linux
+    after_success:
+    - Rscript -e 'covr::codecov()'
+  - r: release
+    os: osx
+  allow_failures:
+  - r: devel
   
