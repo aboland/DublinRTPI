@@ -14,11 +14,11 @@ db_get_multi_stop_info <- function(stop_numbers){
   combined_info <- NULL
   
   # Progress function will only work in Shiny
-  withProgress(message = 'Updating data', value = 0.1, {
+  # withProgress(message = 'Updating data', value = 0.1, {
     # Loop over all bus stops
     for(i in 1:length(stop_numbers)){
       # Update progress bar message
-      incProgress(0, detail = paste0("Getting stop ", stop_numbers[i], " info"))
+      # incProgress(0, detail = paste0("Getting stop ", stop_numbers[i], " info"))
       
       # Call API
       get_info <- httr::GET(paste0("https://data.smartdublin.ie/cgi-bin/rtpi/realtimebusinformation?stopid=", stop_numbers[i],"&format=json"))
@@ -39,16 +39,19 @@ db_get_multi_stop_info <- function(stop_numbers){
           # If error return the error message
           stop_info[[i]] <- temp_info$errormessage
         }
-        # increase progress bar indicator
-        incProgress(1/length(stop_numbers))
       }else{
-        stop("Unexpected http response ", get_info$status_code)
+        # stop("Unexpected http response ", get_info$status_code)
+        stop_info[[i]] <- get_info$status_code
       }
+      # increase progress bar indicator
+      incProgress(1/length(stop_numbers))
     }
-  })
+  # })
   names(stop_info) <- paste0("number", stop_numbers)
-  combined_info <- combined_info %>% arrange(arrivaldatetime)
-  return(list(results = combined_info, stop = stop_info))
+  if(!is.null(combined_info))
+    combined_info <- combined_info %>% arrange(arrivaldatetime)
+  
+  return(list(results = combined_info, stop = stop_info, api_status = get_info$status_code))
 }
 
 
@@ -157,3 +160,20 @@ dart_stop_info <- function(station_name){
   stop_info <- stop_info %>% select(Destination, Status, Lastlocation, Duein, Exparrival, Expdepart, Direction, Traintype)
   return(stop_info)
 }
+
+
+# dart_stop_info <- function(station_name){
+#   get_info <- httr::GET(paste0("http://api.irishrail.ie/realtime/realtime.asmx/getStationDataByCodeXML?StationCode=", station_name))
+#   
+#   if(get_info$status_code == 200){
+#     api_data <- xmlParse(httr::content(get_info, "text"))
+#     stop_info <- xmlToDataFrame(api_data)
+#     
+#     stop_info <- stop_info %>% select(Destination, Status, Lastlocation, Duein, Exparrival, Expdepart, Direction, Traintype)
+#     return(stop_info)
+#   }else{
+#     return("No info")
+#   }
+# }
+
+
