@@ -1,10 +1,8 @@
 Package: dublinRTPI
 Type: Package
 Title: Access to real time transport info for Dulbin , IE
-Version: 1.0
-Date: 2019-05-14
-Author: Aidan Boland
-Maintainer: Aidan Boland <aidansboland@gmail.com>
+Version: 1.1
+Authors@R: person("Aidan", "Boland", email = "aidansboland@gmail.com", role = c("aut", "cre"), comment = c(ORCID = "0000-0001-7649-5968"))
 Description: Functions  to access real-time transport info for Dublin, Ireland.
 Depends: R (>= 3.5.0) 
 License: GPL-3
