@@ -5,18 +5,24 @@
 #' @examples
 #' \dontrun{dart_stop_info("tara")}
 #' 
-#' @import XML
 #' @import dplyr
+#' 
 #' 
 #' @export
 dart_info <-
 function(station_name){
-  api_data <- xmlParse(paste0("http://api.irishrail.ie/realtime/realtime.asmx/getStationDataByCodeXML?StationCode=", station_name))
-  stop_info <- xmlToDataFrame(api_data)
   
-  if (nrow(stop_info) < 1)
-    stop("No info for ", station_name)
+  stop_info <- 
+    dart_api(station_name)
   
-  stop_info <- stop_info %>% select(.data$Destination, .data$Status, .data$Lastlocation, .data$Duein, .data$Exparrival, .data$Expdepart, .data$Direction, .data$Traintype)
-  return(stop_info)
+  if (nrow(stop_info) < 1) {
+    return(
+      data.frame(Destination = "", Status = "No Information", Lastlocation = "", Duein = "", Exparrival = "", Expdepart = "", Direction = "", Traintype = ""))
+    # stop("No info for ", station_name)
+  }
+  
+  # stop_info <- 
+  #   stop_info %>% 
+  #   select(.data$Destination, .data$Status, .data$Lastlocation, .data$Duein, .data$Exparrival, .data$Expdepart, .data$Direction, .data$Traintype)
+  return(stop_info[,c("Destination", "Status", "Lastlocation", "Duein", "Exparrival", "Expdepart", "Direction", "Traintype")])
 }

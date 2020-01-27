@@ -19,7 +19,10 @@ Imports:
   rvest,
   shiny,
   stringr,
-  testthat,
   XML,
   xml2
+Suggests: 
+  testthat,
+  covr
 RoxygenNote: 7.0.2
+
