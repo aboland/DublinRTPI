@@ -18,8 +18,10 @@ function(stop_number){
   
   webpage_data <- tryCatch({
     read_html(paste0("http://www.dublinbus.ie/RTPI/Sources-of-Real-Time-Information/?searchtype=view&searchquery=", stop_number))
-  }, error = function(e) stop("Unable to reach site")
-  )
+  }, error = function(e) {
+    e$message <- paste("Unable to reach site:", e, sep = " ")
+    stop(e)
+  })
   
   all_text <- 
     webpage_data  %>% 
