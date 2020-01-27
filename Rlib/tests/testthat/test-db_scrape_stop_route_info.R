@@ -15,8 +15,15 @@ test_that("Test that data can be scraped", {
     
     if (sample_return$errorcode == 0)
       expect_equal(names(sample_return), c("results", "errorcode"))
-    # expect_error(db_scrape_stop_route_info("afga"))
+    
+    expect_equal(db_scrape_stop_route_info("afga"),
+                 list(errorcode = 1, errormessage = "No results found"))
+    
+  } else{
+    expect_error(db_scrape_stop_route_info(7582))
   }
   
   
 })
+
+
