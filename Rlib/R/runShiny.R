@@ -4,7 +4,7 @@
 #' 
 #' @export
 runShiny <- function() {
-  appDir <- system.file("shiny-example", package = "dublinRTPI")
+  appDir <- system.file("shiny-app", package = "dublinRTPI")
   if (appDir == "") {
     stop("Could not find example directory. Try re-installing `mypackage`.", call. = FALSE)
   }

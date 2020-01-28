@@ -13,8 +13,8 @@
 dart_api <-
   function(station_name){
     
-    if (!station_name %in% gsub(" ", "", unlist(dublinRTPI::tidy_station_list)))
-      stop('"', station_name, '"', " is not a valid station! See 'tidy_station_list' for list of stations.")
+    if (!station_name %in% gsub(" ", "", unlist(dublinRTPI::tidy_train_stations)))
+      stop('"', station_name, '"', " is not a valid station! See 'train_station_list' for list of stations.")
     
     stop_info <- 
       tryCatch({
