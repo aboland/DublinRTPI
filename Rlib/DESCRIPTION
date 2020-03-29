@@ -20,7 +20,6 @@ Imports:
   XML,
   xml2
 Suggests: 
-  testthat,
-  covr
-RoxygenNote: 7.0.2
-
+    testthat (>= 2.1.0),
+    covr
+RoxygenNote: 7.1.0

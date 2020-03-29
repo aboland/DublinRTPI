@@ -4,15 +4,17 @@
 \name{train_stations}
 \alias{train_stations}
 \title{Train stations}
-\format{A list with 167 elements.
+\format{
+A list with 167 elements.
 \describe{
   \item{StationDesc}{Full station name}
   \item{StationAlias}{Alternative name}
   \item{StationLatitude}{Latitude}
   \item{StationLongitude}{Longitude}
   \item{StationCode}{Station code}
-  \item{StationId}{Stiotion ID}
-  }}
+  \item{StationId}{Station ID}
+  }
+}
 \usage{
 train_stations
 }

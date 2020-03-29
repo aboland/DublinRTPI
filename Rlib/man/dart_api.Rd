@@ -4,10 +4,18 @@
 \alias{dart_api}
 \title{Call API for real time info for a DART station}
 \usage{
-dart_api(station_name)
+dart_api(
+  station_name,
+  base_url = "http://api.irishrail.ie",
+  api_path = "/realtime/realtime.asmx/getStationDataByCodeXML"
+)
 }
 \arguments{
 \item{station_name}{A station name, short version.}
+
+\item{base_url}{The base url for API endpoint}
+
+\item{api_path}{Path for API endpoint}
 }
 \value{
 A data frame containing the times until the next train at the selected station.
