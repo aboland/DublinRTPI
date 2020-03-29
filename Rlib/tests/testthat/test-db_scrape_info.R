@@ -13,5 +13,4 @@ test_that("Test that data can be scraped", {
   
   expect_equal(names(sample_return), 
                c("results", "stop"))
-  
 })
