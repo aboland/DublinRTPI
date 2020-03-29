@@ -4,7 +4,9 @@
 \name{bus_stop_list}
 \alias{bus_stop_list}
 \title{Bus stops}
-\format{A large list with 10133 elements.}
+\format{
+A large list with 10133 elements.
+}
 \usage{
 bus_stop_list
 }
