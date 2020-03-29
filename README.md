@@ -9,9 +9,8 @@ Status](https://travis-ci.org/aboland/DublinRTPI.svg?branch=master)](https://tra
 
 Real-time Passenger Information for Dublin city’s public transport.
 
-Code to retrieve real time information about Dublin Bus and Dart
-services. Allows the aggregation of multiple bus stops.  
-**No Luas info currently.**
+Code to retrieve real time information about Dublin Bus, Luad, and Dart
+services. Allows the aggregation of multiple bus stops.
 
 -----
 

@@ -93,7 +93,7 @@ ui <- fluidPage(
           selectInput(
             "dart_selected_stop",
             label = "Choose Stop",
-            choices = tidy_station_list,
+            choices = tidy_train_stations,
             selected = "tara "
           ),
           uiOutput("dart_direction"),
