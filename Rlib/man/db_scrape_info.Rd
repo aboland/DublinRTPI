@@ -13,7 +13,8 @@ db_scrape_info(stop_numbers)
 A data frame containing the times until the next buses at the selected stops.
 }
 \description{
-This function uses the \link{db_scrape_stop_route_info} function to collect info for multiple stops.
+This function uses the \link{db_scrape_stop_route_info} function to collect info for multiple stops. 
+This is a backup for when the API is unavailable.
 }
 \examples{
 \dontrun{db_scrape_multi_stop_info(c(334, 336))}
