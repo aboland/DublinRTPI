@@ -4,10 +4,18 @@
 \alias{luas_info}
 \title{API call for Luas real time info}
 \usage{
-luas_info(stop_name)
+luas_info(
+  stop_name,
+  base_url = "http://luasforecasts.rpa.ie",
+  api_path = "/xml/get.ashx"
+)
 }
 \arguments{
 \item{stop_name}{Abbreviated stop name}
+
+\item{base_url}{The base url for API endpoint}
+
+\item{api_path}{Path for API endpoint}
 }
 \description{
 API call for Luas real time info

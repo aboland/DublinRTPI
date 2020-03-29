@@ -4,10 +4,18 @@
 \alias{db_info}
 \title{Real time info for multiple bus stops (API)}
 \usage{
-db_info(stop_numbers)
+db_info(
+  stop_numbers,
+  base_url = "https://data.smartdublin.ie",
+  api_path = "/cgi-bin/rtpi/realtimebusinformation"
+)
 }
 \arguments{
 \item{stop_numbers}{A vector of bus stop numbers.}
+
+\item{base_url}{Base URL for dublin bus API}
+
+\item{api_path}{path for API endpoint}
 }
 \value{
 A data frame containing the times until the next buses at the selected stops.

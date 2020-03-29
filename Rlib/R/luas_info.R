@@ -1,26 +1,36 @@
 #' API call for Luas real time info
 #' 
 #' @param stop_name Abbreviated stop name
+#' @param base_url The base url for API endpoint
+#' @param api_path Path for API endpoint
 #' 
 #' @import xml2
 #' @import dplyr
 #' 
 #' @export
 
-luas_info <- function(stop_name){
+luas_info <- function(stop_name, base_url = "http://luasforecasts.rpa.ie", api_path = "/xml/get.ashx"){
 
   # # Call API
   # get_info <- 
   #   httr::GET(
   #   paste0("http://luasforecasts.rpa.ie/xml/get.ashx?action=forecast&stop=", stop_name,"&encrypt=false")
   #   ) ; get_info %>% content("text")
- 
+  
+  # test <- 
+  #   xmlParse(
+  #     paste0("http://luasforecasts.rpa.ie/xml/get.ashx?action=forecast&stop=", "ran","&encrypt=false")
+  #   ) %>% 
+  #   xmlToList()
+  
+  
+  
   get_info <- 
     tryCatch({
       list(
         data = 
           xml2::read_xml(
-            paste0("http://luasforecasts.rpa.ie/xml/get.ashx?action=forecast&stop=", stop_name,"&encrypt=false")
+            paste0(base_url, api_path, "?action=forecast&stop=", stop_name,"&encrypt=false")
           ), 
         error = NULL)
     }, 
@@ -31,10 +41,6 @@ luas_info <- function(stop_name){
     
   if (!is.null(get_info$error))
     stop(get_info$error)
-  # get_info %>% xml2::xml_name()
-  # get_info %>% xml2::xml_children()
-  # get_info %>% xml2::xml_text()
-  # get_info %>% xml2::xml_structure()
   
   direction <- 
     get_info$data %>% 

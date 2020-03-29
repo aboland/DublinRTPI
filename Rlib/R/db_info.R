@@ -3,6 +3,9 @@
 #' This function uses the Irish transport API to retrieve the rela time information about bus stops.
 #' 
 #' @param stop_numbers A vector of bus stop numbers.
+#' @param base_url Base URL for dublin bus API
+#' @param api_path path for API endpoint
+#' 
 #' @return A data frame containing the times until the next buses at the selected stops.
 #' @examples
 #' \dontrun{db_get_multi_stop_info(c(334, 336))}
@@ -13,7 +16,7 @@
 #' 
 #' @export
 db_info <-
-  function(stop_numbers){
+  function(stop_numbers, base_url = "https://data.smartdublin.ie", api_path = "/cgi-bin/rtpi/realtimebusinformation"){
     
     # Check that the input stop numbers are numeric
     stop_numbers = suppressWarnings(as.numeric(stop_numbers))
@@ -27,7 +30,7 @@ db_info <-
     for (i in 1:length(stop_numbers)) {
       
       # Call API
-      get_info <- httr::GET(paste0("https://data.smartdublin.ie/cgi-bin/rtpi/realtimebusinformation?stopid=", stop_numbers[i],"&format=json"))
+      get_info <- httr::GET(paste0(base_url, api_path, "?stopid=", stop_numbers[i],"&format=json"))
       
       if (get_info$status_code == 200) {
         temp_info <- jsonlite::fromJSON(httr::content(get_info, "text"))

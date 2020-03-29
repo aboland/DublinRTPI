@@ -41,4 +41,8 @@ test_that("API returns info and structure", {
              paste0('"', "nsasn", '"', " is not a valid station! See 'tidy_station_list' for list of stations."))
   )
   
+  expect_error(
+    dart_api("tara", base_url = "na")
+  )
+  
 })

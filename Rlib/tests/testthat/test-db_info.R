@@ -17,6 +17,12 @@ test_that("API returns info and structure", {
   
 })
 
-
+test_that("bad urls gives error",{
+  expect_error(db_info(7582, base_url = "asd"))
+  
+  expect_error(db_info(7582, api_path =  "/asd"), 
+               "Unexpected http response 404")
+  
+})
 
 
