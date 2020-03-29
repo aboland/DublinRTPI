@@ -4,7 +4,9 @@
 \name{tidy_train_stations}
 \alias{tidy_train_stations}
 \title{Train stations (tidy)}
-\format{A list with 167 elements.}
+\format{
+A list with 167 elements.
+}
 \usage{
 tidy_train_stations
 }
