@@ -14,6 +14,8 @@ matrix:
     - Rscript -e 'covr::codecov()'
   - r: release
     os: osx
+  - r: release
+    os: windows
   allow_failures:
   - r: devel
   
